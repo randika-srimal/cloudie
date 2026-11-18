@@ -158,23 +158,54 @@ describe('SalesAgent', () => {
     expect(await c.chat('one too many')).toBe(RATE_LIMITED_TEXT);
   });
 
-  it.each([
-    ['KV', (e: Env) => vi.spyOn(e.CONFIG, 'get')],
-    ['R2', (e: Env) => vi.spyOn(e.KB, 'get')],
-  ] as const)('answers with the fallback text during a %s outage', async (_n, spyOn) => {
-    const c = await connect('t-outage');
-    const doEnv = await runInDurableObject(stub('t-outage'), (a: SalesAgent) => {
-      return (a as unknown as { env: Env }).env;
-    });
-    spyOn(doEnv).mockRejectedValue(new Error('outage'));
-    resetConfigCache(); // connecting warmed both caches
-    resetKbCache();
+  /** The env object the Durable Object sees (shared by every instance in the isolate). */
+  const doEnv = (name: string) =>
+    runInDurableObject(stub(name), (a: SalesAgent) => (a as unknown as { env: Env }).env);
+
+  it('keeps the last good config during a KV outage after a good turn', async () => {
+    // maxHistory 2 makes the stored config observable: the defaults would send 3 messages below.
+    await env.CONFIG.put('config', JSON.stringify({ kbVersion: 'v1', maxHistory: 2 }));
+    const c = await connect('t-kv');
+    expect(await c.chat('one')).toBe('echo: one');
+    vi.spyOn((await doEnv('t-kv')).CONFIG, 'get').mockRejectedValue(new Error('outage'));
+    // Push the cached config past its 60 s TTL so the next turn really reads KV.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 120_000);
     try {
-      expect(await c.chat('hi')).toBe(FALLBACK_TEXT);
+      const history = [msg('user', 'one'), msg('assistant', 'echo: one')];
+      expect(await c.chat('two', history)).toBe('echo: two');
+      const prompt = getLastMockModel()?.doStreamCalls[0]?.prompt ?? [];
+      expect(prompt.filter((m) => m.role !== 'system')).toHaveLength(2);
     } finally {
+      vi.useRealTimers();
       vi.restoreAllMocks();
     }
   });
+
+  it('keeps the last good KB when the config names no version', async () => {
+    const c = await connect('t-kbkeep'); // loads KB v1
+    await env.CONFIG.put('config', JSON.stringify({ kbVersion: '' }));
+    resetConfigCache();
+    expect(await c.chat('hi')).toBe('echo: hi');
+  });
+
+  it.each([
+    ['KV', (e: Env) => vi.spyOn(e.CONFIG, 'get')],
+    ['R2', (e: Env) => vi.spyOn(e.KB, 'get')],
+  ] as const)(
+    'answers with the fallback text during a %s outage before anything loaded',
+    async (_n, spyOn) => {
+      const c = await connect('t-outage');
+      spyOn(await doEnv('t-outage')).mockRejectedValue(new Error('outage'));
+      resetConfigCache(); // connecting warmed both caches
+      resetKbCache();
+      try {
+        expect(await c.chat('hi')).toBe(FALLBACK_TEXT);
+      } finally {
+        vi.restoreAllMocks();
+      }
+    },
+  );
 
   it('sends only the last maxHistory messages to the model', async () => {
     const history: UIMsg[] = [];

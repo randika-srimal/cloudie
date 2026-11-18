@@ -1,5 +1,5 @@
 import { AIChatAgent, type OnChatMessageOptions } from '@cloudflare/ai-chat';
-import { type AgentState, type AssistantConfig, DEFAULT_CONFIG } from '@cloudie/protocol';
+import type { AgentState } from '@cloudie/protocol';
 import { type Connection, type ConnectionContext, getCurrentAgent } from 'agents';
 import {
   convertToModelMessages,
@@ -71,16 +71,6 @@ function textReply(text: string): Response {
 export class SalesAgent extends AIChatAgent<Env, AgentState> {
   override initialState: AgentState = { kbVersion: '', allowlist: [] };
 
-  /** Config, falling back to the defaults when KV is unreachable. */
-  private async config(): Promise<AssistantConfig> {
-    try {
-      return await loadConfig(this.env);
-    } catch (e) {
-      console.error('config load failed, using defaults', String(e));
-      return { ...DEFAULT_CONFIG };
-    }
-  }
-
   /** The knowledge base, or null when none is published or R2 is unreachable. */
   private async kb(version: string): Promise<Kb | null> {
     try {
@@ -94,7 +84,7 @@ export class SalesAgent extends AIChatAgent<Env, AgentState> {
   override async onConnect(conn: Connection, ctx: ConnectionContext): Promise<void> {
     const ip = ctx.request.headers.get('cf-connecting-ip') ?? 'unknown';
     conn.setState((prev: unknown) => ({ ...(prev as ConnState | null), ip }));
-    const kb = await this.kb((await this.config()).kbVersion);
+    const kb = await this.kb((await loadConfig(this.env)).kbVersion);
     this.setState({ kbVersion: kb?.version ?? '', allowlist: kb?.manifest.allowlist ?? [] });
   }
 
@@ -123,7 +113,7 @@ export class SalesAgent extends AIChatAgent<Env, AgentState> {
     const { success } = await this.env.RATE_LIMIT.limit({ key: ip });
     if (!success) return textReply(RATE_LIMITED_TEXT);
 
-    const config = await this.config();
+    const config = await loadConfig(this.env);
     const kb = await this.kb(config.kbVersion);
     if (!kb) return textReply(FALLBACK_TEXT);
 
