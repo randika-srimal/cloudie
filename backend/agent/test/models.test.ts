@@ -1,0 +1,91 @@
+import { env } from 'cloudflare:test';
+import { DEFAULT_CONFIG } from '@cloudie/protocol';
+import { streamText } from 'ai';
+import { describe, expect, it } from 'vitest';
+import type { Env } from '../src/env.ts';
+import { getLastMockModel, MissingKeyError, resolveModel } from '../src/models.ts';
+
+// The global test env sets MOCK_MODEL; these build their own env for the real-provider path.
+const real = (extra: Partial<Env> = {}): Env => ({
+  ...env,
+  MOCK_MODEL: undefined,
+  AI_GATEWAY_URL: 'http://gw.test',
+  ...extra,
+});
+
+describe('resolveModel', () => {
+  it('builds an anthropic model with prompt caching and effort', () => {
+    const r = resolveModel(DEFAULT_CONFIG, real({ CF_AIG_TOKEN: 't' }));
+    expect(typeof r.model !== 'string' && r.model.provider).toMatch(/^anthropic/);
+    expect(r.cacheSystem).toBe(true);
+    expect(r.providerOptions).toEqual({ anthropic: { effort: 'low' } });
+  });
+
+  it('builds an openai model without system caching', () => {
+    const r = resolveModel(
+      { ...DEFAULT_CONFIG, provider: 'openai', model: 'gpt-5', effort: 'high' },
+      real({ OPENAI_API_KEY: 'k' }),
+    );
+    expect(typeof r.model !== 'string' && r.model.provider).toMatch(/^openai/);
+    expect(r.cacheSystem).toBe(false);
+    expect(r.providerOptions).toEqual({ openai: { reasoningEffort: 'high' } });
+  });
+
+  it('builds a google model with no provider options', () => {
+    const r = resolveModel(
+      { ...DEFAULT_CONFIG, provider: 'google', model: 'gemini-3-pro' },
+      real({ CF_AIG_TOKEN: 't' }),
+    );
+    expect(typeof r.model !== 'string' && r.model.provider).toMatch(/^google/);
+    expect(r.cacheSystem).toBe(false);
+    expect(r.providerOptions).toEqual({});
+  });
+
+  it('omits effort options when effort is unset', () => {
+    const { effort: _e, ...noEffort } = DEFAULT_CONFIG;
+    const r = resolveModel(noEffort, real({ CF_AIG_TOKEN: 't' }));
+    expect(r.providerOptions).toEqual({});
+  });
+
+  it('throws MissingKeyError with neither token nor key', () => {
+    expect(() => resolveModel(DEFAULT_CONFIG, real())).toThrow(MissingKeyError);
+  });
+
+  it('sends requests to the gateway path with the gateway token', async () => {
+    const calls: { url: string; headers: Headers }[] = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((input: Request | string | URL, init?: RequestInit) => {
+      calls.push({ url: String(input), headers: new Headers(init?.headers) });
+      return Promise.resolve(new Response('{}', { status: 500 }));
+    }) as typeof fetch;
+    try {
+      const r = resolveModel(DEFAULT_CONFIG, real({ CF_AIG_TOKEN: 'tok' }));
+      const res = streamText({ model: r.model, prompt: 'hi', maxRetries: 0, onError: () => {} });
+      await res.consumeStream({ onError: () => {} });
+    } finally {
+      globalThis.fetch = orig;
+    }
+    expect(calls[0]?.url).toBe('http://gw.test/anthropic/messages');
+    expect(calls[0]?.headers.get('cf-aig-authorization')).toBe('Bearer tok');
+  });
+
+  it('echoes the last user text with MOCK_MODEL=echo', async () => {
+    const r = resolveModel(DEFAULT_CONFIG, { ...env, MOCK_MODEL: 'echo' });
+    const res = streamText({
+      model: r.model,
+      messages: [
+        { role: 'user', content: 'first' },
+        { role: 'assistant', content: 'ok' },
+        { role: 'user', content: 'hello there' },
+      ],
+    });
+    expect(await res.text).toBe('echo: hello there');
+    expect(getLastMockModel()?.doStreamCalls).toHaveLength(1);
+  });
+
+  it('throws on use with MOCK_MODEL=fail', async () => {
+    const r = resolveModel(DEFAULT_CONFIG, { ...env, MOCK_MODEL: 'fail' });
+    const res = streamText({ model: r.model, prompt: 'x', maxRetries: 0, onError: () => {} });
+    await expect(res.text).rejects.toThrow();
+  });
+});
