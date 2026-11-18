@@ -1,0 +1,38 @@
+# The sales-assistant agent Worker: a Cloudflare Agents SDK Durable Object (SalesAgent) behind /agents/*.
+name = "cloudie-agent"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-secret, never in this file.
+[vars]
+# Placeholder: Task 11 / Terraform outputs fill in the real account id.
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/cloudie-assistant"
+
+[[durable_objects.bindings]]
+name = "SalesAgent"
+class_name = "SalesAgent"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SalesAgent"]
+
+# Placeholder id: Task 11 / Terraform outputs fill in the real namespace id.
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "00000000000000000000000000000000"
+
+# Placeholder bucket: Task 11 / Terraform creates the real one.
+[[r2_buckets]]
+binding = "KB"
+bucket_name = "cloudie-kb"
+
+[[ratelimits]]
+name = "RATE_LIMIT"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[observability]
+enabled = true

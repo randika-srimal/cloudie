@@ -1,0 +1,5 @@
+# Local-only secrets for `wrangler dev`. Copy to .dev.vars (ignored by Git).
+# CF_AIG_TOKEN=
+# ANTHROPIC_API_KEY=
+# OPENAI_API_KEY=
+# GOOGLE_API_KEY=

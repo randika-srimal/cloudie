@@ -8,6 +8,7 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+  core-js-pure: false
 
 # pnpm refuses versions published less than a day ago (supply-chain protection). These were the
 # newest releases when the starter was made; the list can be emptied once they are a day old.

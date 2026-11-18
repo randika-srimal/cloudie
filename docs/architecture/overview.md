@@ -20,15 +20,17 @@ flowchart TB
 A visitor's browser gets the prerendered page straight from Cloudflare's CDN, then the page calls `/api/hello`,
 which runs a Function in the data center nearest to them.
 
-| Resource        | What it is                                                                                                     | Reached by                 | Defined in                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| Pages project   | One Cloudflare Pages project serving the static site and the Functions under one address (`cloudie.pages.dev`) | Everyone                   | `backend/infra/main.tf` (the project), `backend/api/wrangler.toml` (its settings) |
-| Static site     | HTML, CSS and JS that SvelteKit prerenders at build time. Cached at the edge; no server runs for it            | Browsers                   | `web/`                                                                            |
-| Pages Functions | TypeScript files in `backend/api/functions/`; the file path is the route (`api/hello.ts` → `/api/hello`)       | Browsers                   | `backend/api/functions/`                                                          |
-| Middleware      | `_middleware.ts` runs before every Function: common headers, errors as JSON                                    | Every `/api` request       | `backend/api/functions/_middleware.ts`                                            |
-| Custom domains  | Optional. A `cloudflare_pages_domain` plus a proxied CNAME per domain                                          | Everyone                   | `backend/infra/variables.tf` (`custom_domains`)                                   |
-| Terraform state | A private R2 bucket holding Terraform's record of what it manages                                              | `./cli.sh infra-*`         | `backend/infra/backend.tf`, created by `./cli.sh infra-bootstrap`                 |
-| API tokens      | Admin (Terraform), state (R2 key pair), deploy (Wrangler, CI)                                                  | `./cli.sh`, GitHub Actions | `scripts/tokens.sh`                                                               |
+| Resource        | What it is                                                                                                                         | Reached by                 | Defined in                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| Pages project   | One Cloudflare Pages project serving the static site and the Functions under one address (`cloudie.pages.dev`)                     | Everyone                   | `backend/infra/main.tf` (the project), `backend/api/wrangler.toml` (its settings) |
+| Static site     | HTML, CSS and JS that SvelteKit prerenders at build time. Cached at the edge; no server runs for it                                | Browsers                   | `web/`                                                                            |
+| Pages Functions | TypeScript files in `backend/api/functions/`; the file path is the route (`api/hello.ts` → `/api/hello`)                           | Browsers                   | `backend/api/functions/`                                                          |
+| Middleware      | `_middleware.ts` runs before every Function: common headers, errors as JSON                                                        | Every `/api` request       | `backend/api/functions/_middleware.ts`                                            |
+| Agent Worker    | A separate Worker (`cloudie-agent`) hosting the `SalesAgent` Durable Object of the Cloudflare Agents SDK; routed under `/agents/*` | Browsers                   | `backend/agent/`                                                                  |
+| CONFIG KV       | A KV namespace holding the assistant's runtime config under key `config` (read by the agent Worker, cached 60 s)                   | Agent Worker               | `backend/agent/wrangler.toml`, `backend/agent/src/config.ts`                      |
+| Custom domains  | Optional. A `cloudflare_pages_domain` plus a proxied CNAME per domain                                                              | Everyone                   | `backend/infra/variables.tf` (`custom_domains`)                                   |
+| Terraform state | A private R2 bucket holding Terraform's record of what it manages                                                                  | `./cli.sh infra-*`         | `backend/infra/backend.tf`, created by `./cli.sh infra-bootstrap`                 |
+| API tokens      | Admin (Terraform), state (R2 key pair), deploy (Wrangler, CI)                                                                      | `./cli.sh`, GitHub Actions | `scripts/tokens.sh`                                                               |
 
 ## Glossary
 
