@@ -8,3 +8,7 @@ pnpm-lock.yaml
 e2e/package-lock.json
 .tmp
 .superpowers
+# Case studies migrated from Google Docs exports; reformatting them would only add noise
+knowledge/case-studies
+# Test fixtures: their exact frontmatter quoting is part of what the tests cover
+scripts/kb/test/fixtures

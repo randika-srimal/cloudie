@@ -10,15 +10,18 @@
     "dev": "concurrently -n agent,api,vite -c blue,magenta,green \"pnpm --filter agent dev\" \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
     "build": "pnpm --filter web build",
     "test": "vitest run",
-    "typecheck": "pnpm -r --parallel typecheck",
+    "typecheck": "pnpm -r --parallel typecheck && tsc -p scripts/kb",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "cli": "bash scripts/cli.sh",
     "tf": "bash scripts/tf.sh",
-    "docs": "node scripts/docs-serve.mjs"
+    "docs": "node scripts/docs-serve.mjs",
+    "kb:check": "node --experimental-strip-types scripts/kb/check.ts",
+    "kb:build": "node --experimental-strip-types scripts/kb/build.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
     "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
     "eslint-plugin-svelte": "^3.24.1",

@@ -1,0 +1,43 @@
+name: Knowledge base
+
+# knowledge/ is published to R2 separately from the code: the agent picks up a new version from its KV config
+# without a deploy. Pull requests run the checks; a merge to main publishes (once deploys are turned on).
+on:
+  pull_request:
+    paths: ['knowledge/**']
+  push:
+    branches: [main]
+    paths: ['knowledge/**']
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm kb:check
+
+  publish:
+    # Same switch as the code deploy in ci.yml: the repository variable DEPLOY_ENABLED=true.
+    if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    # One publish at a time, so two quick merges cannot leave KV pointing at the older build.
+    concurrency: kb-publish
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/kb/publish.sh

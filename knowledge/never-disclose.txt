@@ -1,0 +1,36 @@
+# Names that must never appear in the uploaded knowledge base. `pnpm kb:check` fails when one turns up in
+# instructions.md or in any case study that is uploaded (whole words, any letter case). One name per line;
+# lines starting with # are comments.
+#
+# The `client` field of every anonymous and never_disclose case study is checked as well, so the main real
+# name of each anonymous client is not repeated here: this file lists the other names they go by.
+
+# Excluded engagement: do not confirm or deny that Engaging.io worked with them.
+British American Tobacco
+VUSE
+
+# A Miami-based stadium and its major sports and entertainment brands (client: Hard Rock Stadium)
+Hard Rock
+HRS
+Miami Dolphins
+Dolphins
+Miami Grand Prix
+Miami Open
+
+# A retail advertising space business (client: National Board Systems)
+NBS
+
+# A collection of award-winning luxury lodges (client: Baillie Lodges)
+Bailie Lodges
+Tierra Hotels
+
+# A luxury hospitality group operating a hotel, restaurant and spa (client: Lake House Daylesford)
+Lake House
+Lakehouse
+
+# A collection of iconic live entertainment venues (client: World Choice Investments)
+WCI
+
+# A NSW Government entity managing cemetery and memorial services (client: Metropolitan Memorial Parks)
+MMPLM
+MMP

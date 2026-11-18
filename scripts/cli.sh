@@ -277,6 +277,56 @@ act_logs() {
   wrangler pages deployment tail --project-name "$(pages_project)" --environment production || true
 }
 
+# ── Sales assistant (knowledge base and runtime config, see knowledge/README.md) ──
+
+agent_wrangler() { (cd "$ROOT/backend/agent" && pnpm exec wrangler "$@"); }
+
+act_kb_check() { run pnpm kb:check; }
+
+act_kb_publish() {
+  ensure_cloudflare
+  note "Checks and builds knowledge/, uploads it to R2 (cloudie-kb) and points the live assistant at it."
+  confirm "Publish the knowledge base to production?" || return 0
+  run bash "$ROOT/scripts/kb/publish.sh"
+}
+
+# Shows the agent's runtime config (KV key `config`), lets you edit a copy, validates it, then saves it.
+act_ai_config() {
+  ensure_cloudflare
+  local current tmp
+  current="$(agent_wrangler kv key get config --binding CONFIG --remote)" || { fail "Could not read the config"; return 1; }
+  if [[ -z "$current" || "$current" == *"Value not found"* ]]; then
+    note "No config saved yet; starting from the defaults."
+    current="$(node --experimental-strip-types --input-type=module -e '
+      import { DEFAULT_CONFIG } from "./shared/protocol/src/index.ts";
+      console.log(JSON.stringify(DEFAULT_CONFIG, null, 2));')"
+  fi
+  printf '%s\n' "$current"
+  confirm "Edit it?" || return 0
+  tmp="$(mktemp --suffix=.json)"
+  printf '%s\n' "$current" >"$tmp"
+  while true; do
+    "${EDITOR:-vi}" "$tmp"
+    if node --experimental-strip-types --input-type=module -e '
+      import { readFileSync } from "node:fs";
+      import { AssistantConfig } from "./shared/protocol/src/index.ts";
+      let value;
+      try { value = JSON.parse(readFileSync(process.argv[1], "utf8")); }
+      catch (e) { console.error(`Not JSON: ${e.message}`); process.exit(1); }
+      const parsed = AssistantConfig.safeParse(value);
+      if (!parsed.success) {
+        for (const i of parsed.error.issues) console.error(`${i.path.join(".") || "(config)"}: ${i.message}`);
+        process.exit(1);
+      }' "$tmp"; then
+      break
+    fi
+    confirm "That config is invalid. Edit it again?" || { rm -f "$tmp"; return 1; }
+  done
+  confirm "Save this config? The assistant uses it within a minute." || { rm -f "$tmp"; return 0; }
+  run agent_wrangler kv key put config "$(cat "$tmp")" --binding CONFIG --remote
+  rm -f "$tmp"
+}
+
 # ── Menu ──────────────────────────────────────────────────────────────────
 
 # "action|Label" per line, grouped
@@ -307,7 +357,10 @@ deploy_preview|Build and deploy a preview (its own address)
 deployments|List deployments
 logs|Stream production logs
 health|Health check"
-MENUS=("$MENU_CHECKS" "$MENU_LOCAL" "$MENU_SETUP" "$MENU_INFRA" "$MENU_DEPLOY")
+MENU_ASSISTANT="kb_check|Check the knowledge base (knowledge/)
+kb_publish|Publish the knowledge base to the live assistant
+ai_config|Show or edit the assistant config (model, kbVersion, …)"
+MENUS=("$MENU_CHECKS" "$MENU_LOCAL" "$MENU_SETUP" "$MENU_INFRA" "$MENU_DEPLOY" "$MENU_ASSISTANT")
 
 pick() { # menu text → action name
   local label
@@ -325,13 +378,14 @@ menu() {
   while true; do
     local group action menu_text
     group="$(gum choose --header "What do you want to do?" \
-      "Checks" "Local" "Cloudflare setup" "Infrastructure" "Deploy" "Quit")" || exit 0
+      "Checks" "Local" "Cloudflare setup" "Infrastructure" "Deploy" "Sales assistant" "Quit")" || exit 0
     case "$group" in
       "Checks") menu_text="$MENU_CHECKS" ;;
       "Local") menu_text="$MENU_LOCAL" ;;
       "Cloudflare setup") menu_text="$MENU_SETUP" ;;
       "Infrastructure") menu_text="$MENU_INFRA" ;;
       "Deploy") menu_text="$MENU_DEPLOY" ;;
+      "Sales assistant") menu_text="$MENU_ASSISTANT" ;;
       *) exit 0 ;;
     esac
     action="$(pick "$menu_text" "$group")" || continue
