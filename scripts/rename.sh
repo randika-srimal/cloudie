@@ -34,7 +34,7 @@ if command -v gum >/dev/null && [ -t 0 ]; then gum confirm "Rename the project?"
 
 # Text files only, skipping generated and vendored folders.
 mapfile -t FILES < <(grep -rIl \
-  --exclude-dir={node_modules,.git,.svelte-kit,build,.wrangler,.terraform,out} \
+  --exclude-dir={node_modules,.git,.svelte-kit,build,.wrangler,.terraform,out,.tmp,.superpowers} \
   --exclude=pnpm-lock.yaml --exclude=package-lock.json --exclude=rename.sh \
   -e "$OLD_NAME" -e "$OLD_TITLE" . || true)
 

@@ -50,7 +50,7 @@ If another project already uses a port (two projects from this starter, say), co
 change them:
 
 ```bash
-cp .env.example .env   # then edit WEB_PORT, API_PORT, DOCS_PORT, SHARE_PORT
+cp .env.example .env   # then edit WEB_PORT, API_PORT, DOCS_PORT
 ```
 
 ## File changes not picked up (Windows, macOS)
