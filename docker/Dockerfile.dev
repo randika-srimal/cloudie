@@ -1,0 +1,41 @@
+# The dev container: Node, pnpm, gum (the project CLI's menus) and Terraform. About 400 MB.
+# Packages are NOT baked in: `pnpm install` runs when the container starts, against a cached store volume,
+# so changing package.json never needs an image rebuild. Rebuild only when a version below changes.
+FROM node:26-bookworm-slim
+
+ARG PNPM_VERSION=12.21.0
+ARG GUM_VERSION=2.0.2
+ARG TERRAFORM_VERSION=1.17.2
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl git jq openssl unzip \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g --no-audit --no-fund "pnpm@${PNPM_VERSION}" \
+ && npm cache clean --force
+
+# gum (charm.sh), checked against the release's published SHA-256 sums.
+RUN arch="$(dpkg --print-architecture)" \
+ && case "$arch" in amd64) garch=x86_64 ;; arm64) garch=arm64 ;; *) echo "unsupported: $arch" >&2; exit 1 ;; esac \
+ && base="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}" \
+ && tgz="gum_${GUM_VERSION}_Linux_${garch}.tar.gz" \
+ && cd /tmp && curl -fsSLO "$base/$tgz" && curl -fsSLO "$base/checksums.txt" \
+ && grep " $tgz\$" checksums.txt | sha256sum -c - \
+ && tar -xzf "$tgz" -C /usr/local/bin --strip-components=1 --wildcards '*/gum' \
+ && rm -rf /tmp/* && gum --version
+
+# Terraform for backend/infra/, checked against HashiCorp's published SHA-256 sums.
+RUN arch="$(dpkg --print-architecture)" \
+ && base="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}" \
+ && zip="terraform_${TERRAFORM_VERSION}_linux_${arch}.zip" \
+ && cd /tmp && curl -fsSLO "$base/$zip" && curl -fsSLo SHA256SUMS "$base/terraform_${TERRAFORM_VERSION}_SHA256SUMS" \
+ && grep " $zip\$" SHA256SUMS | sha256sum -c - \
+ && unzip -q "$zip" terraform -d /usr/local/bin \
+ && rm -rf /tmp/* && terraform version
+
+ENV TF_PLUGIN_CACHE_DIR=/tf-plugin-cache \
+    npm_config_store_dir=/pnpm-store \
+    npm_config_confirm_modules_purge=false
+WORKDIR /app
+COPY docker/dev-entrypoint.sh /usr/local/bin/dev-entrypoint
+ENTRYPOINT ["dev-entrypoint"]
+CMD ["pnpm", "dev"]

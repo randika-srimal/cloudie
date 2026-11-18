@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+.svelte-kit
+build
+**/.wrangler
+test-results
+pnpm-lock.yaml
+e2e/package-lock.json
+# Flutter app: dart format and flutter analyze own it
+mobile

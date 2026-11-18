@@ -1,0 +1,4 @@
+# Copy to terraform.auto.tfvars (ignored by Git) to override defaults without editing variables.tf,
+# or change the defaults in variables.tf and commit them.
+# zone_name      = "example.com"
+# custom_domains = ["app.example.com"]

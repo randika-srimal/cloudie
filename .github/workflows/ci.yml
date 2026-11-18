@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  # Formatting and validity of backend/infra/. Needs no Cloudflare access: plans run on your computer
+  # (./cli.sh infra-plan), because they need the state bucket keys.
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/infra
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.2
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
+  # The Flutter app in mobile/: static analysis and unit tests. Same Flutter version as docker/flutter.Dockerfile.
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.50.0
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  deploy:
+    needs: [check, terraform]
+    # Turn on by setting the repository variable DEPLOY_ENABLED=true once the Pages project exists
+    # (./cli.sh first-setup) and the CLOUDFLARE_API_TOKEN secret is set (./cli.sh deploy-token).
+    # Code only: infrastructure changes go out with ./cli.sh deploy on your computer, which runs
+    # Terraform first, because only the admin token can change them.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Deploy Pages
+        working-directory: backend/api
+        run: pnpm exec wrangler pages deploy ../../web/build --project-name cloudie --branch main

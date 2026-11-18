@@ -1,0 +1,19 @@
+# Static analysis for `./cli.sh app analyze` (flutter analyze). Recommended Flutter lints plus a few
+# that keep the code consistent. https://dart.dev/tools/linter-rules
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    always_declare_return_types: true
+    avoid_print: true
+    prefer_final_locals: true
+    unawaited_futures: true
+
+formatter:
+  page_width: 120

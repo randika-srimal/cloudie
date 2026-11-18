@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cloudie docs</title>
+    <meta
+      name="description"
+      content="Cloudie: a starter for Cloudflare Pages sites with Flutter mobile apps"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/themes/core.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/themes/addons/core-dark.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+    <style>
+      :root {
+        --theme-color: #e8762d;
+        --content-max-width: 60rem;
+      }
+      .markdown-section table {
+        display: table;
+        width: 100%;
+      }
+      .mermaid svg {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">Loading…</div>
+    <script>
+      // Reference pages live outside docs/ (the repo READMEs). docs-serve.mjs serves the whole
+      // repo's Markdown, so they are fetched from the site root with a full URL (skips basePath).
+      const root = window.location.origin;
+      window.$docsify = {
+        name: 'Cloudie',
+        basePath: '/docs/',
+        loadSidebar: true,
+        subMaxLevel: 2,
+        auto2top: true,
+        relativePath: false,
+        alias: {
+          '/.*/_sidebar.md': '/_sidebar.md',
+          '/reference/readme': root + '/README.md',
+          '/reference/infra': root + '/backend/infra/README.md',
+          '/reference/mobile': root + '/mobile/README.md',
+          '/reference/claude': root + '/CLAUDE.md',
+        },
+        search: {
+          paths: 'auto',
+          placeholder: 'Search the docs',
+          noData: 'Nothing found',
+          depth: 3,
+        },
+        mermaidConfig: { querySelector: '.mermaid' },
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/docsify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/plugins/search.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@3.0.2/dist/docsify-copy-code.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-json.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-toml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-hcl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-dart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify-mermaid@2.0.1/dist/docsify-mermaid.js"></script>
+    <script>
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+      });
+    </script>
+  </body>
+</html>

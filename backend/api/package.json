@@ -1,0 +1,21 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "mkdir -p ../../web/build && ([ -f .dev.vars ] || cp .dev.vars.example .dev.vars) && wrangler pages dev --port 8788 --ip 0.0.0.0 --persist-to ../../.wrangler/state",
+    "test": "vitest run",
+    "typecheck": "tsc -p functions/tsconfig.json && tsc -p functions-test/tsconfig.json"
+  },
+  "dependencies": {
+    "@cloudie/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.4",
+    "@cloudflare/workers-types": "^5.20261118.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.164.0"
+  }
+}

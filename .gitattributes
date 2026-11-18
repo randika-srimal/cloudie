@@ -1,0 +1,11 @@
+* text=auto
+# Shell scripts run in Git Bash and in the Linux container; CRLF breaks them
+*.sh text eol=lf
+Dockerfile* text eol=lf
+*.Dockerfile text eol=lf
+docker/* text eol=lf
+*.tf text eol=lf
+*.tfvars text eol=lf
+.terraform.lock.hcl text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf

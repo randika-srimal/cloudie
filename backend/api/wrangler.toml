@@ -1,0 +1,25 @@
+# One Cloudflare Pages project: the static site in web/build plus the Pages Functions in ./functions.
+# `name` must match pages_project_name in backend/infra/variables.tf.
+name = "cloudie"
+pages_build_output_dir = "../../web/build"
+compatibility_date = "2026-11-01"
+
+# Plain (non-secret) settings, readable as env.<NAME>. Secrets: ./cli.sh set-secret (never in this file).
+[vars]
+APP_VERSION = "0.1.0"
+
+# Add bindings here when the project needs them, then create the resource in backend/infra/main.tf:
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "cloudie-db"
+# database_id = "00000000-0000-0000-0000-000000000000"
+# migrations_dir = "../migrations"
+#
+# [[r2_buckets]]
+# binding = "FILES"
+# bucket_name = "cloudie-files"
+#
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "..."

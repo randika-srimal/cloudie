@@ -1,0 +1,25 @@
+packages:
+  - web
+  - backend/*
+  - shared/*
+
+# Packages allowed to run install scripts (native binaries for the Workers runtime and the bundler).
+# Everything else is blocked, so a compromised dependency can't run code on install.
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+# pnpm refuses versions published less than a day ago (supply-chain protection). These were the
+# newest releases when the starter was made; the list can be emptied once they are a day old.
+minimumReleaseAgeExclude:
+  - '@cloudflare/vitest-plugin@1.8.4'
+  - '@cloudflare/workers-types@5.20261118.1'
+  - '@sveltejs/kit@3.3.1'
+  - '@vitest/mocker@5.1.1'
+  - '@vitest/spy@5.1.1'
+  - esrap@2.4.2
+  - miniflare@5.20261117.0-beta
+  - prettier-plugin-svelte@4.2.0
+  - svelte@5.58.0
+  - vitest@5.1.1
+  - wrangler@4.164.0

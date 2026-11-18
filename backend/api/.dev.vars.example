@@ -1,0 +1,2 @@
+# Local-only secrets for `wrangler pages dev`. Copied to .dev.vars (ignored by Git) on first `pnpm dev`.
+# EXAMPLE_SECRET=change-me
