@@ -58,41 +58,6 @@ services:
         '--',
       ]
 
-  # The Flutter toolbox for mobile/. Only runs through ./cli.sh app <command>, one command at a time.
-  flutter:
-    build: { context: ., dockerfile: docker/flutter.Dockerfile }
-    image: cloudie-flutter:local
-    profiles: [mobile]
-    working_dir: /app/mobile
-    extra_hosts:
-      - 'host.docker.internal:host-gateway' # Docker Desktop sets this already; plain Docker Engine needs it
-    environment:
-      - TERM=${TERM:-xterm-256color}
-      - ADB_SERVER_SOCKET=tcp:host.docker.internal:5037 # this computer's adb server; the phone stays plugged in here
-      - LAN_IP=${LAN_IP:-}
-      - SHARE_PORT=${SHARE_PORT:-8790}
-      - DEV_PORT=${API_PORT:-8788} # what `app apk --local|--usb` connects to
-      - APP_URL=${APP_URL:-}
-      - HOST_UID=${HOST_UID:-1000}
-      - HOST_GID=${HOST_GID:-1000}
-    volumes:
-      - .:/app
-      - android-sdk:/opt/android-sdk # packages Gradle downloads are kept
-      - pub-cache:/root/.pub-cache
-      - gradle-cache:/root/.gradle
-
-  # Serves mobile/out/ (the debug APK) to phones on the same Wi-Fi: ./cli.sh app share.
-  share:
-    image: busybox:1.37
-    profiles: [mobile]
-    command: ['httpd', '-f', '-v', '-p', '8790', '-h', '/srv', '-c', '/etc/httpd.conf']
-    volumes:
-      - ./mobile/out:/srv:ro
-      - ./docker/share-httpd.conf:/etc/httpd.conf:ro
-    ports:
-      - '0.0.0.0:${SHARE_PORT:-8790}:8790'
-    stop_grace_period: 1s
-
 volumes:
   node-modules:
   web-node-modules:
@@ -102,6 +67,3 @@ volumes:
   pnpm-store:
   tf-plugin-cache:
   e2e-node-modules:
-  android-sdk:
-  pub-cache:
-  gradle-cache:

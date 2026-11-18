@@ -14,12 +14,11 @@
 ```mermaid
 flowchart LR
   H["./cli.sh on your computer"] -->|up, down, logs-dev, e2e| C[docker compose]
-  H -->|app &lt;command&gt;| F[flutter container<br/>docker/app.sh]
   H -->|anything else| A[app container<br/>scripts/cli.sh, the gum menu]
 ```
 
 `./cli.sh` itself only needs Docker. It starts the dev stack if needed and runs `scripts/cli.sh` inside the `app`
-container, where gum, pnpm, Wrangler and Terraform live. Mobile commands go to the Flutter container instead.
+container, where gum, pnpm, Wrangler and Terraform live.
 
 ## Actions
 
@@ -28,7 +27,6 @@ container, where gum, pnpm, Wrangler and Terraform live. Mobile commands go to t
 | On your computer | `up` / `down`                         | Start or stop the dev stack                                                  |
 |                  | `logs-dev`                            | Follow the dev stack's output                                                |
 |                  | `e2e [filter]`                        | Playwright tests against the dev stack                                       |
-|                  | `app <command>`                       | The Flutter app ([Mobile app](mobile.md))                                    |
 | Checks           | `check-all`                           | Typecheck, lint and test                                                     |
 |                  | `test`, `typecheck`, `lint`, `format` | One at a time                                                                |
 | Local            | `build`                               | Build the website into `web/build`                                           |

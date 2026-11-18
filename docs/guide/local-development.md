@@ -30,13 +30,11 @@ the same runtime as production.
 
 ## The containers
 
-| Service   | Image                           | Starts               | Purpose                                                  |
-| --------- | ------------------------------- | -------------------- | -------------------------------------------------------- |
-| `app`     | `cloudie-dev:local` (~200 MB)   | `./cli.sh up`        | Node 26, pnpm, Wrangler, Terraform, gum. Runs `pnpm dev` |
-| `docs`    | `node:26-alpine`                | `./cli.sh up`        | Serves `docs/` read-only                                 |
-| `e2e`     | Playwright                      | `./cli.sh e2e`       | End-to-end tests against the running `app`               |
-| `flutter` | `cloudie-flutter:local` (~3 GB) | `./cli.sh app …`     | Flutter, Android SDK, JDK; one command, then thrown away |
-| `share`   | `busybox`                       | `./cli.sh app share` | Serves the debug APK to phones on your Wi-Fi             |
+| Service | Image                         | Starts         | Purpose                                                  |
+| ------- | ----------------------------- | -------------- | -------------------------------------------------------- |
+| `app`   | `cloudie-dev:local` (~200 MB) | `./cli.sh up`  | Node 26, pnpm, Wrangler, Terraform, gum. Runs `pnpm dev` |
+| `docs`  | `node:26-alpine`              | `./cli.sh up`  | Serves `docs/` read-only                                 |
+| `e2e`   | Playwright                    | `./cli.sh e2e` | End-to-end tests against the running `app`               |
 
 Why it stays light:
 
@@ -75,7 +73,6 @@ Or one at a time inside the container: `docker compose exec app pnpm test | type
 | Lint       | ESLint 10 (flat config, `eslint.config.js`) and Prettier                   |
 | Unit tests | Vitest 5. API tests run inside workerd through `@cloudflare/vitest-plugin` |
 | End to end | Playwright against the dev stack (`e2e/tests`)                             |
-| Mobile     | `./cli.sh app analyze`, `./cli.sh app test`                                |
 
 ## A shell in the container
 

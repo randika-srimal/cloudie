@@ -277,22 +277,6 @@ act_logs() {
   wrangler pages deployment tail --project-name "$(pages_project)" --environment production || true
 }
 
-# ── Mobile ────────────────────────────────────────────────────────────────
-
-# The Flutter app runs in its own container, started from your computer, not from here.
-act_mobile_help() {
-  note "Run these from the repo root on your computer (see docs/guide/mobile.md):"
-  cat <<'TXT'
-  ./cli.sh app apk [--local|--usb]   debug APK in mobile/out/ (deployed site, LAN dev stack, or USB)
-  ./cli.sh app share                 QR code to install the debug APK over Wi-Fi
-  ./cli.sh app install               install over USB (adb on your computer)
-  ./cli.sh app run [--local|--usb]   flutter run with hot reload
-  ./cli.sh app test | analyze        Flutter tests, static analysis
-  ./cli.sh app build                 signed release .aab/.apk for Google Play
-  ./cli.sh app icons | shell | image icons and splash, a shell, rebuild the image
-TXT
-}
-
 # ── Menu ──────────────────────────────────────────────────────────────────
 
 # "action|Label" per line, grouped
@@ -304,7 +288,7 @@ format|Format all files"
 MENU_LOCAL="build|Build the web app (web/build)
 install|Install packages (after editing a package.json)
 outdated|Show outdated packages
-rename|Rename this starter for a new project (name, app id)"
+rename|Rename this starter for a new project (name)"
 MENU_SETUP="first_setup|First-time setup wizard
 whoami|Check the Cloudflare login
 set_secret|Set a Pages secret (env.<NAME> in the Functions)
@@ -323,8 +307,7 @@ deploy_preview|Build and deploy a preview (its own address)
 deployments|List deployments
 logs|Stream production logs
 health|Health check"
-MENU_MOBILE="mobile_help|Android and iOS app commands (run from ./cli.sh on your computer)"
-MENUS=("$MENU_CHECKS" "$MENU_LOCAL" "$MENU_SETUP" "$MENU_INFRA" "$MENU_DEPLOY" "$MENU_MOBILE")
+MENUS=("$MENU_CHECKS" "$MENU_LOCAL" "$MENU_SETUP" "$MENU_INFRA" "$MENU_DEPLOY")
 
 pick() { # menu text → action name
   local label
@@ -342,14 +325,13 @@ menu() {
   while true; do
     local group action menu_text
     group="$(gum choose --header "What do you want to do?" \
-      "Checks" "Local" "Cloudflare setup" "Infrastructure" "Deploy" "Mobile app" "Quit")" || exit 0
+      "Checks" "Local" "Cloudflare setup" "Infrastructure" "Deploy" "Quit")" || exit 0
     case "$group" in
       "Checks") menu_text="$MENU_CHECKS" ;;
       "Local") menu_text="$MENU_LOCAL" ;;
       "Cloudflare setup") menu_text="$MENU_SETUP" ;;
       "Infrastructure") menu_text="$MENU_INFRA" ;;
       "Deploy") menu_text="$MENU_DEPLOY" ;;
-      "Mobile app") menu_text="$MENU_MOBILE" ;;
       *) exit 0 ;;
     esac
     action="$(pick "$menu_text" "$group")" || continue

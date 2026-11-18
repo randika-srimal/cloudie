@@ -36,8 +36,7 @@ For a page that only works in the browser (it reads the URL at runtime, e.g. `/i
    ```
 
 3. Test it in `backend/api/functions-test/` (copy `api.test.ts`; set `params` in `context()`).
-4. Call it from the website with `Note.parse(await res.json())`, and from the app in
-   `mobile/lib/api/client.dart`.
+4. Call it from the website with `Note.parse(await res.json())`.
 
 ## A secret
 

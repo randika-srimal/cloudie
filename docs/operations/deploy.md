@@ -80,8 +80,7 @@ custom_domains = ["app.example.com"]
 ```
 
 `./cli.sh infra-apply` adds the domain to the Pages project and its DNS record. `./cli.sh infra-output` shows
-when it is active (usually a few minutes, for the certificate). Point the app at it in `mobile/lib/config.dart`
-and `docker/app.sh`.
+when it is active (usually a few minutes, for the certificate).
 
 ## Rolling back
 

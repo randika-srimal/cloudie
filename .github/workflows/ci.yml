@@ -37,23 +37,6 @@ jobs:
       - run: terraform init -backend=false -input=false
       - run: terraform validate
 
-  # The Flutter app in mobile/: static analysis and unit tests. Same Flutter version as docker/flutter.Dockerfile.
-  mobile:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
-    steps:
-      - uses: actions/checkout@v5
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 3.50.0
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
-
   deploy:
     needs: [check, terraform]
     # Turn on by setting the repository variable DEPLOY_ENABLED=true once the Pages project exists

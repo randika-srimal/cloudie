@@ -1,6 +1,6 @@
 # Cloudie
 
-A starter for projects that run on **Cloudflare Pages**, with an optional **Flutter** app for Android and iOS.
+A starter for projects that run on **Cloudflare Pages**.
 Out of the box it is a hello-world page and one API route, wired end to end: the same layout, tooling and
 project CLI as Morse, with nothing project-specific left in.
 
@@ -10,10 +10,9 @@ project CLI as Morse, with nothing project-specific left in.
 | API            | Cloudflare Pages Functions: TypeScript files that become routes under `/api`                 | `backend/api/functions/`                |
 | Shared types   | Zod schemas for every API reply, used by the API, the website and the tests                  | `shared/protocol/`                      |
 | Infrastructure | Terraform (Cloudflare provider v5): the Pages project, custom domains, DNS                   | `backend/infra/`                        |
-| Mobile app     | One Flutter project for Android and iOS, calling the same `/api` routes                      | `mobile/`                               |
 | Tooling        | Docker dev stack, gum menu CLI, Vitest (in workerd), Playwright, ESLint, Prettier, GitHub CI | `cli.sh`, `scripts/`, `docker/`, `e2e/` |
 
-Your computer only needs **Docker** (and Git Bash on Windows). Node, pnpm, Wrangler, Terraform, gum and Flutter
+Your computer only needs **Docker** (and Git Bash on Windows). Node, pnpm, Wrangler, Terraform and gum
 all run in containers.
 
 ## Where to start
@@ -26,7 +25,6 @@ all run in containers.
 | Understand what runs where                  | [Architecture and resources](architecture/overview.md) |
 | Add a page, a route, a database or a secret | [Adding features](architecture/adding-features.md)     |
 | Put it on the internet                      | [Deploy to Cloudflare](operations/deploy.md)           |
-| Build the Android app, or the iOS one       | [Mobile app](guide/mobile.md)                          |
 
 ## Quick start
 
@@ -53,6 +51,5 @@ Chosen as the newest stable releases in November 2026. `./cli.sh outdated` lists
 | ESLint                          | 10               | root `package.json`                                                     |
 | Zod                             | 4.6 (`zod/mini`) | `shared/protocol/package.json`                                          |
 | Terraform / Cloudflare provider | 1.17 / 5.29      | `docker/Dockerfile.dev`, `backend/infra/versions.tf`                    |
-| Flutter / Dart                  | 3.50 / 3.14      | `docker/flutter.Dockerfile`, `mobile/pubspec.yaml`                      |
 | gum                             | 2.0              | `docker/Dockerfile.dev`                                                 |
 | Playwright                      | 1.65             | `e2e/package.json`, `docker-compose.yml`                                |

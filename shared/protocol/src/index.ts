@@ -1,5 +1,5 @@
 // The shapes the API sends and the web app (and tests) read, defined once with Zod.
-// Add a schema here for every new route; the Flutter app mirrors them by hand in mobile/lib/api/.
+// Add a schema here for every new route.
 // zod/mini: the same schemas, tree-shakable, so the web bundle only carries what it uses.
 import { z } from 'zod/mini';
 

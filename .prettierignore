@@ -6,5 +6,3 @@ build
 test-results
 pnpm-lock.yaml
 e2e/package-lock.json
-# Flutter app: dart format and flutter analyze own it
-mobile

@@ -13,4 +13,3 @@ test-results
 *.tfstate.*
 *.tfplan
 .env*
-mobile

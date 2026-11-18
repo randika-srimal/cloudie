@@ -13,7 +13,6 @@ export default defineConfig(
       '**/dist/',
       '**/.wrangler/',
       'test-results/',
-      'mobile/',
     ],
   },
   js.configs.recommended,
