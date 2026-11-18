@@ -65,6 +65,10 @@ jobs:
       - run: pnpm build
         env:
           PUBLIC_TURNSTILE_SITEKEY: ${{ vars.PUBLIC_TURNSTILE_SITEKEY }}
+      # The agent Worker goes first: Pages' AGENT service binding needs it to exist.
+      - name: Deploy agent Worker
+        working-directory: backend/agent
+        run: pnpm exec wrangler deploy
       - name: Deploy Pages
         working-directory: backend/api
         run: pnpm exec wrangler pages deploy ../../web/build --project-name cloudie --branch main

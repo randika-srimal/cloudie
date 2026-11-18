@@ -36,3 +36,9 @@ variable "custom_domains" {
     error_message = "Set zone_name, and make every custom domain zone_name itself or a subdomain of it."
   }
 }
+
+variable "hubspot_domains" {
+  description = "HubSpot page hostnames that may show the chat, e.g. [\"www.example.com\"]. Added to the Turnstile widget's allowed domains only; they are not chat origins."
+  type        = list(string)
+  default     = []
+}

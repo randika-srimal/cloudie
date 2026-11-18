@@ -30,11 +30,17 @@ ADMIN="cloudie-terraform-admin"
 STATE="cloudie-terraform-state"
 DEPLOY="cloudie-deploy"
 
-# What Wrangler needs to deploy Pages and set its secrets. Add groups here when the project grows
-# (e.g. "D1 Write", "Workers R2 Storage Write", "Workers Scripts Write"), then run ./cli.sh tokens again.
+# What Wrangler needs to deploy Pages and the agent Worker, set their secrets and publish the knowledge base
+# (R2 uploads, KV config). Names must match Cloudflare's permission groups exactly; the check below fails with
+# the offending name if one is wrong. Add groups here when the project grows (e.g. "D1 Write"), then run
+# ./cli.sh tokens again.
 DEPLOY_PERMISSIONS=(
   "Account Settings Read"
   "Pages Write"
+  "Workers Scripts Write"
+  "Workers KV Storage Write"
+  "Workers R2 Storage Write"
+  "AI Gateway Write"
 )
 
 die() { echo "tokens: $*" >&2; exit 1; }

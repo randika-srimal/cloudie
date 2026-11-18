@@ -10,8 +10,8 @@ preview_urls = false
 
 # Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-secret, never in this file.
 [vars]
-# Placeholder: Task 11 / Terraform outputs fill in the real account id.
-AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/cloudie-assistant"
+# Written by `./cli.sh infra-write-config` (part of `./cli.sh deploy`) from the Terraform output ai_gateway_url.
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/cloudie-assistant" # tf-sync
 
 [[durable_objects.bindings]]
 name = "SalesAgent"
@@ -21,16 +21,19 @@ class_name = "SalesAgent"
 tag = "v1"
 new_sqlite_classes = ["SalesAgent"]
 
-# Placeholder id: Task 11 / Terraform outputs fill in the real namespace id.
+# The id is written by `./cli.sh infra-write-config` from the Terraform output kv_config_id (the all-zero
+# value is the placeholder before the first infra-apply). Commit the real id: it is not a secret.
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "00000000000000000000000000000000"
+id = "00000000000000000000000000000000" # tf-sync
 
-# Placeholder bucket: Task 11 / Terraform creates the real one.
+# Terraform creates this bucket (cloudflare_r2_bucket.kb); the name is fixed in backend/infra/main.tf.
 [[r2_buckets]]
 binding = "KB"
 bucket_name = "cloudie-kb"
 
+# namespace_id: any positive integer, unique per Cloudflare account (not a resource Terraform creates). Pick
+# different numbers if another Worker in the account already uses 1001 or 1002.
 [[ratelimits]]
 name = "RATE_LIMIT"
 namespace_id = "1001"

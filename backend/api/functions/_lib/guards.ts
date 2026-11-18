@@ -25,12 +25,31 @@ export function checkOrigin(req: Request, allowed: string[]): boolean {
   return req.headers.get('Sec-Fetch-Site') === 'same-origin';
 }
 
-/** Asks Turnstile's siteverify whether `token` is a fresh, valid challenge answer. False on any failure. */
+/** Turnstile's published test secrets (1x00..AA, 2x00..AA, 3x00..AA): siteverify reports hostname example.com. */
+const isTestSecret = (secret: string) => /^[123]x0{20,}/.test(secret);
+
+/** The hostnames of `ALLOWED_ORIGINS` entries (e.g. "https://a.example" gives "a.example"); invalid entries are skipped. */
+export function originHostnames(origins: string[]): string[] {
+  return origins.flatMap((o) => {
+    try {
+      return [new URL(o).hostname];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/**
+ * Asks Turnstile's siteverify whether `token` is a fresh, valid challenge answer. False on any failure.
+ * With `hostnames`, the reply's `hostname` (the page that ran the widget) must also be one of them, so a token
+ * solved on some other site that shares the widget's sitekey is refused. Not enforced for Turnstile's test secrets.
+ */
 export async function verifyTurnstile(
   token: string,
   secret: string,
   ip: string,
   fetchFn: typeof fetch = fetch,
+  hostnames?: string[],
 ): Promise<boolean> {
   if (!token || token.length > MAX_TOKEN) return false;
   const body = new FormData();
@@ -41,7 +60,12 @@ export async function verifyTurnstile(
     const res = await fetchFn(SITEVERIFY, { method: 'POST', body });
     if (!res.ok) return false;
     const data: unknown = await res.json();
-    return typeof data === 'object' && data !== null && 'success' in data && data.success === true;
+    if (typeof data !== 'object' || data === null || !('success' in data) || data.success !== true)
+      return false;
+    if (!hostnames || isTestSecret(secret)) return true;
+    return (
+      'hostname' in data && typeof data.hostname === 'string' && hostnames.includes(data.hostname)
+    );
   } catch (e) {
     console.error('turnstile siteverify failed', String(e));
     return false;

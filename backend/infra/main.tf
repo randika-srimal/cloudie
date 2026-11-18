@@ -47,6 +47,52 @@ resource "cloudflare_dns_record" "web" {
   comment = "Pages project ${cloudflare_pages_project.web.name} (Terraform)"
 }
 
+# ── Sales assistant (agent Worker in backend/agent) ───────────────────────
+# Terraform creates the containers; `wrangler deploy` in backend/agent ships the code and binds them.
+# `./cli.sh infra-sync` copies the IDs below into backend/agent/wrangler.toml.
+
+# The assistant's runtime config (key `config`: model, kbVersion, ...). Contents are written by
+# `./cli.sh ai-config` and `./cli.sh kb-publish`, never by Terraform.
+resource "cloudflare_workers_kv_namespace" "config" {
+  account_id = var.account_id
+  title      = "cloudie-config"
+}
+
+# The published knowledge base (kb/<version>/...). Private; prevent_destroy protects the uploaded content.
+resource "cloudflare_r2_bucket" "kb" {
+  account_id = var.account_id
+  name       = "cloudie-kb"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Proxy, cache and log for the model calls. The agent Worker authenticates with the Worker secret CF_AIG_TOKEN
+# (`./cli.sh set-agent-secret`); `authentication = true` rejects calls without it. Gateway limit: 300 requests
+# per 60 s (sliding window) across all chats.
+resource "cloudflare_ai_gateway" "assistant" {
+  account_id = var.account_id
+  id         = "cloudie-assistant"
+
+  collect_logs               = true
+  cache_ttl                  = 0
+  cache_invalidate_on_update = false
+  rate_limiting_limit        = 300
+  rate_limiting_interval     = 60
+  rate_limiting_technique    = "sliding"
+  authentication             = true
+}
+
+# The invisible bot check on the chat page. It runs where the chat page is served; hubspot_domains covers any
+# HubSpot page address that needs it too.
+resource "cloudflare_turnstile_widget" "chat" {
+  account_id = var.account_id
+  name       = "cloudie-chat"
+  mode       = "invisible"
+  domains    = concat([cloudflare_pages_project.web.subdomain], sort(tolist(var.custom_domains)), var.hubspot_domains)
+}
+
 # ── Add more here as the project grows, e.g. ──────────────────────────────
 #
 # resource "cloudflare_d1_database" "main" {

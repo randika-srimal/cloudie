@@ -5,6 +5,7 @@ import type { Env } from '../_lib/env.ts';
 import {
   checkOrigin,
   PASS_SECONDS,
+  originHostnames,
   parseOrigins,
   readCookie,
   signPass,
@@ -27,7 +28,8 @@ function withCookie(res: Response, cookie: string): Response {
 export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return error(404, 'Not found');
-  if (!checkOrigin(request, parseOrigins(env.ALLOWED_ORIGINS))) return error(403, 'Forbidden');
+  const origins = parseOrigins(env.ALLOWED_ORIGINS);
+  if (!checkOrigin(request, origins)) return error(403, 'Forbidden');
 
   // Cloudflare sets cf-connecting-ip itself in production, so clients cannot choose their key.
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
@@ -38,7 +40,10 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   url.searchParams.delete('cf_turnstile'); // tokens stay out of the agent's URLs and logs
   let setCookie: string | undefined;
   if (!(await verifyPass(readCookie(request, 'chat_pass'), env.PASS_SECRET, now))) {
-    if (!token || !(await verifyTurnstile(token, env.TURNSTILE_SECRET, ip))) {
+    if (
+      !token ||
+      !(await verifyTurnstile(token, env.TURNSTILE_SECRET, ip, fetch, originHostnames(origins)))
+    ) {
       return error(401, 'Verification required');
     }
     const pass = await signPass(env.PASS_SECRET, now);

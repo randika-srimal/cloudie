@@ -3,7 +3,12 @@
 import { createExecutionContext, env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { onRequest as middleware } from '../functions/_middleware.ts';
-import { signPass, verifyPass, verifyTurnstile } from '../functions/_lib/guards.ts';
+import {
+  originHostnames,
+  signPass,
+  verifyPass,
+  verifyTurnstile,
+} from '../functions/_lib/guards.ts';
 import type { Env } from '../functions/_lib/env.ts';
 import { onRequest as proxy } from '../functions/agents/[[path]].ts';
 
@@ -39,10 +44,10 @@ function context(
 }
 
 /** Makes Turnstile's siteverify answer `success` (and records what it was sent). */
-function fakeSiteverify(success: boolean) {
+function fakeSiteverify(success: boolean, hostname = 'chat.test') {
   return vi
     .spyOn(globalThis, 'fetch')
-    .mockImplementation(() => Promise.resolve(Response.json({ success })));
+    .mockImplementation(() => Promise.resolve(Response.json({ success, hostname })));
 }
 
 async function passCookie(now = Date.now()): Promise<string> {
@@ -89,6 +94,11 @@ describe('/agents proxy guards', () => {
   it('refuses a token siteverify rejects', async () => {
     fakeSiteverify(false);
     expect((await proxy(context('/agents/sales-agent/s1?cf_turnstile=bad'))).status).toBe(401);
+  });
+
+  it('refuses a valid token that was solved on another hostname', async () => {
+    fakeSiteverify(true, 'evil.test');
+    expect((await proxy(context('/agents/sales-agent/s1?cf_turnstile=good'))).status).toBe(401);
   });
 
   it('forwards with a valid token, strips it and sets a 12 h chat_pass cookie', async () => {
@@ -199,6 +209,37 @@ describe('verifyTurnstile', () => {
     const ok = vi.fn(() => Promise.resolve(Response.json({ success: true })));
     expect(await verifyTurnstile('', 's', '1.2.3.4', ok)).toBe(false);
     expect(ok).not.toHaveBeenCalled();
+  });
+});
+
+describe('verifyTurnstile hostname check', () => {
+  const reply = (hostname: string) => () =>
+    Promise.resolve(Response.json({ success: true, hostname }));
+  const hosts = originHostnames(['https://chat.test', 'http://localhost:5173', 'not a url']);
+
+  it('derives hostnames from origins, skipping invalid ones', () => {
+    expect(hosts).toEqual(['chat.test', 'localhost']);
+  });
+
+  it('accepts a token solved on an allowed hostname', async () => {
+    expect(await verifyTurnstile('t', 'live-secret', '1.2.3.4', reply('chat.test'), hosts)).toBe(
+      true,
+    );
+  });
+
+  it('refuses a token solved on another hostname, or with none reported', async () => {
+    expect(await verifyTurnstile('t', 'live-secret', '1.2.3.4', reply('evil.test'), hosts)).toBe(
+      false,
+    );
+    const none = () => Promise.resolve(Response.json({ success: true }));
+    expect(await verifyTurnstile('t', 'live-secret', '1.2.3.4', none, hosts)).toBe(false);
+  });
+
+  it('does not check hostnames for Turnstile test secrets', async () => {
+    const testSecret = '1x0000000000000000000000000000000AA';
+    expect(await verifyTurnstile('t', testSecret, '1.2.3.4', reply('example.com'), hosts)).toBe(
+      true,
+    );
   });
 });
 

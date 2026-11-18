@@ -118,18 +118,35 @@ act_whoami() {
   run wrangler whoami
 }
 
+# ./cli.sh set-secret [NAME]  (e.g. TURNSTILE_SECRET, PASS_SECRET)
 act_set_secret() {
   ensure_cloudflare
   note "A Pages secret: the Functions read it as env.<NAME>. Add it to backend/api/functions/_lib/env.ts,"
   note "and to backend/api/.dev.vars for local runs."
-  local name value
-  name="$(gum input --placeholder "Name, e.g. RESEND_API_KEY" --width 60)"
+  local name="${1:-}" value
+  [[ -n "$name" ]] || name="$(gum input --placeholder "Name, e.g. RESEND_API_KEY" --width 60)"
   [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || { fail "Use UPPER_SNAKE_CASE"; return 1; }
   value="$(gum input --password --placeholder "Value" --width 60)"
   [[ -n "$value" ]] || { fail "Nothing entered; $name not changed"; return 1; }
   gum style --foreground "$DIM" "\$ wrangler pages secret put $name (value hidden)"
   if printf '%s' "$value" | wrangler pages secret put "$name" --project-name "$(pages_project)"; then
     ok "Set. Deploy Pages again for it to take effect."
+  else fail "Failed"; return 1; fi
+}
+
+# ./cli.sh set-agent-secret [NAME]  (e.g. CF_AIG_TOKEN, a provider key)
+act_set_agent_secret() {
+  ensure_cloudflare
+  note "A secret on the agent Worker (cloudie-agent): backend/agent reads it as env.<NAME>."
+  note "Local runs use backend/agent/.dev.vars."
+  local name="${1:-}" value
+  [[ -n "$name" ]] || name="$(gum input --placeholder "Name, e.g. CF_AIG_TOKEN" --width 60)"
+  [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || { fail "Use UPPER_SNAKE_CASE"; return 1; }
+  value="$(gum input --password --placeholder "Value" --width 60)"
+  [[ -n "$value" ]] || { fail "Nothing entered; $name not changed"; return 1; }
+  gum style --foreground "$DIM" "\$ wrangler secret put $name (value hidden; cloudie-agent)"
+  if printf '%s' "$value" | agent_wrangler secret put "$name"; then
+    ok "Set. It takes effect on the Worker's next request; no redeploy needed."
   else fail "Failed"; return 1; fi
 }
 
@@ -189,6 +206,32 @@ act_deploy_token() {
   printf '%s\n' "$CLOUDFLARE_DEPLOY_TOKEN"
 }
 
+# ── Terraform outputs into code ───────────────────────────────────────────
+# Cloudflare creates the IDs; the code needs them. Lines tagged `# tf-sync` in the wrangler.toml files are
+# rewritten from the Terraform outputs (commit the result). Nothing secret is involved.
+
+tf_out() { bash "$ROOT/scripts/tf.sh" output -raw "$1" 2>/dev/null; }
+
+# set_toml_value FILE KEY VALUE: rewrites `KEY = "..." # tf-sync` (the line must exist)
+set_toml_value() {
+  local file="$1" key="$2" value="$3"
+  grep -Eq "^[[:space:]]*$key = \".*\" # tf-sync" "$file" || { fail "$file has no '$key = ... # tf-sync' line"; return 1; }
+  sed -i -E "s|^([[:space:]]*$key = \").*(\" # tf-sync.*)$|\1$value\2|" "$file"
+}
+
+# Writes the agent's KV id and AI Gateway URL, and the production chat origins, into the wrangler.toml files.
+act_infra_write_config() {
+  ensure_tf || return 1
+  local kv gateway origins
+  kv="$(tf_out kv_config_id)" && gateway="$(tf_out ai_gateway_url)" && origins="$(tf_out chat_origins)" ||
+    { fail "Could not read the Terraform outputs (has './cli.sh infra-apply' run?)"; return 1; }
+  set_toml_value backend/agent/wrangler.toml id "$kv" || return 1
+  set_toml_value backend/agent/wrangler.toml AI_GATEWAY_URL "$gateway" || return 1
+  set_toml_value "$WEB_TOML" ALLOWED_ORIGINS "$origins" || return 1
+  ok "Wrote the KV id, AI Gateway URL and production chat origins ($origins) into the wrangler.toml files."
+  git diff --quiet -- backend/agent/wrangler.toml "$WEB_TOML" || note "They changed: commit backend/agent/wrangler.toml and $WEB_TOML."
+}
+
 # The first step of every deploy: bring Cloudflare in line with backend/infra/ before the code that may
 # depend on it goes out. Plans once, and applies exactly that plan if you agree.
 act_infra_sync() {
@@ -213,12 +256,30 @@ act_infra_sync() {
       ;;
   esac
   rm -f "$ROOT/backend/infra/$plan"
+  act_infra_write_config || note "Check the IDs in backend/agent/wrangler.toml before deploying."
 }
 
 # ── Deploy ────────────────────────────────────────────────────────────────
 
+# The web build inlines PUBLIC_TURNSTILE_SITEKEY (it fails without one). Use the one in the environment, else
+# the Terraform output.
+export_sitekey() {
+  [[ -z "${PUBLIC_TURNSTILE_SITEKEY:-}" && -n "${R2_ACCESS_KEY_ID:-}" ]] &&
+    PUBLIC_TURNSTILE_SITEKEY="$(tf_out turnstile_sitekey)" || true
+  [[ -n "${PUBLIC_TURNSTILE_SITEKEY:-}" ]] ||
+    { fail "No Turnstile sitekey: run Infrastructure → Create or update infrastructure, or set PUBLIC_TURNSTILE_SITEKEY"; return 1; }
+  export PUBLIC_TURNSTILE_SITEKEY
+}
+
+# The agent Worker must exist before Pages: Pages' AGENT service binding points at it.
+act_deploy_agent() {
+  ensure_cloudflare
+  run agent_wrangler deploy
+}
+
 act_deploy_pages() {
   ensure_cloudflare
+  export_sitekey || return 1
   run pnpm build || return 1
   run wrangler pages deploy ../../web/build --project-name "$(pages_project)" --branch main
 }
@@ -230,6 +291,7 @@ act_deploy_preview() {
   branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo preview)"
   branch="$(gum input --value "$branch" --header "Preview branch name" --width 50)"
   [[ -n "$branch" && "$branch" != main ]] || { fail "Pick a branch other than main"; return 1; }
+  export_sitekey || return 1
   run pnpm build || return 1
   run wrangler pages deploy ../../web/build --project-name "$(pages_project)" --branch "$branch"
 }
@@ -239,14 +301,16 @@ act_deploy() {
   gum style --border rounded --padding "0 2" --border-foreground "$GREEN" \
     "Deploy to production ($(pages_project))" "" \
     "1. Infrastructure: Terraform plan, and apply if anything changed (asks)" \
-    "2. Build and deploy Pages" \
-    "3. Health check"
+    "2. Deploy the agent Worker (cloudie-agent; before Pages, which binds to it)" \
+    "3. Build and deploy Pages" \
+    "4. Health check"
   confirm "Deploy now?" || return 0
   if [[ -n "${R2_ACCESS_KEY_ID:-}" ]]; then
     title "Infrastructure" && { act_infra_sync || return 1; }
   else
     note "Skipping Terraform: no state key in .env.cloudflare (run Infrastructure → Create the API tokens)."
   fi
+  title "Agent Worker" && { act_deploy_agent || return 1; }
   title "Pages" && { act_deploy_pages || return 1; }
   title "Health check" && act_health
 }
@@ -353,6 +417,7 @@ rename|Rename this starter for a new project (name)"
 MENU_SETUP="first_setup|First-time setup wizard
 whoami|Check the Cloudflare login
 set_secret|Set a Pages secret (env.<NAME> in the Functions)
+set_agent_secret|Set an agent Worker secret (CF_AIG_TOKEN, provider keys)
 list_secrets|List Pages secrets (names only)
 forget_token|Forget saved token"
 MENU_INFRA="tokens|Create the API tokens: admin, state key, deploy (once a year)
@@ -360,9 +425,11 @@ infra_bootstrap|Create the Terraform state bucket (once)
 infra_plan|Preview infrastructure changes (changes nothing)
 infra_apply|Create or update infrastructure
 infra_output|Show infrastructure IDs and addresses
+infra_write_config|Write Terraform IDs into the wrangler.toml files
 infra_check|Format check and validate (no account needed)
 deploy_token|Show the deploy token (for GitHub Actions)"
-MENU_DEPLOY="deploy|Deploy everything (infrastructure, then Pages)
+MENU_DEPLOY="deploy|Deploy everything (infrastructure, agent Worker, then Pages)
+deploy_agent|Deploy the agent Worker (cloudie-agent)
 deploy_pages|Build and deploy Pages to production
 deploy_preview|Build and deploy a preview (its own address)
 deployments|List deployments
@@ -423,7 +490,7 @@ case "${1:-}" in
   help | -h | --help) usage ;;
   *)
     action="${1//-/_}"
-    if declare -F "act_$action" >/dev/null; then "act_$action"; else
+    if declare -F "act_$action" >/dev/null; then "act_$action" "${@:2}"; else
       echo "Unknown action: $1" >&2
       usage >&2
       exit 1
