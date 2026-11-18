@@ -6,3 +6,5 @@ build
 test-results
 pnpm-lock.yaml
 e2e/package-lock.json
+.tmp
+.superpowers

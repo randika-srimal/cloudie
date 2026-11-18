@@ -19,10 +19,10 @@ Engaging.io's sales assistant (`../engaging-assistant`) helps HubSpot sales reps
 
 **Decided with the user:**
 
-| Decision | Choice |
-|---|---|
-| Hosting | Everything on Cloudflare: page, WebSocket, backend |
-| Access | The chat page is embedded as an iframe in the existing gated HubSpot page, so the Cloudflare URL is public and has to protect itself |
+| Decision | Choice                                                                                                                                                                                 |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hosting  | Everything on Cloudflare: page, WebSocket, backend                                                                                                                                     |
+| Access   | The chat page is embedded as an iframe in the existing gated HubSpot page, so the Cloudflare URL is public and has to protect itself                                                   |
 | Approach | A: Cloudflare Agents SDK (`AIChatAgent` from `@cloudflare/ai-chat`, built on AI SDK `streamText`) in a separate Worker with one Durable Object per conversation. Pages keeps the site. |
 
 ## Architecture

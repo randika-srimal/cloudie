@@ -13,6 +13,8 @@ export default defineConfig(
       '**/dist/',
       '**/.wrangler/',
       'test-results/',
+      '.tmp/',
+      '.superpowers/',
     ],
   },
   js.configs.recommended,

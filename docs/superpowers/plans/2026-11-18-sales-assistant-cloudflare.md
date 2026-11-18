@@ -5,6 +5,7 @@
 **Goal:** Rebuild Engaging.io's case-study sales assistant on Cloudflare. A Pages chat page is embedded in HubSpot as an iframe. A Pages Function proxy forwards to a Worker running Agents SDK `AIChatAgent` Durable Objects. The model and its settings come from KV, the knowledge base from R2, and provider keys from AI Gateway, so none of them needs a code redeploy to change.
 
 **Architecture:**
+
 - The existing Pages project serves `/chat` (prerendered SvelteKit) and `functions/agents/[[path]].ts`. That Function checks Origin, Turnstile and a per-IP connect rate, then forwards the WebSocket over a service binding to a new Worker, `backend/agent`.
 - The Worker's `SalesAgent` (one SQLite Durable Object per chat) builds the system prompt from the knowledge base bundle in R2. It calls the model chosen by the KV `config` key through AI SDK `streamText` behind AI Gateway, and pushes `{kbVersion, allowlist}` to the client as agent state.
 - Terraform creates the KV namespace, the R2 bucket, the AI Gateway and the Turnstile widget.
@@ -47,6 +48,7 @@
 ### Task 1: Remove the Flutter app
 
 **Files:**
+
 - Delete: `mobile/`, `docker/flutter.Dockerfile`, `docker/app.sh`, `docker/share-httpd.conf`, `docs/guide/mobile.md`
 - Modify:
   - root `cli.sh`: the `app)` case, `in_flutter`, `lan_ip` and the header comment
@@ -71,6 +73,7 @@
 **Files:** Modify `shared/protocol/src/index.ts`. Test in `shared/protocol/test/assistant.test.ts`.
 
 **Interfaces (Produces):**
+
 - `AssistantConfig` (zod object), `type AssistantConfig`, and `DEFAULT_CONFIG: AssistantConfig`. Fields:
   - `provider: 'anthropic'|'openai'|'google'`
   - `model: string` (min 1)
@@ -104,11 +107,13 @@
 ### Task 3: Agent Worker package and config loader
 
 **Files:**
+
 - Create: `backend/agent/{package.json,wrangler.toml,tsconfig.json,vitest.config.ts,.dev.vars.example}`, `backend/agent/src/{index.ts,env.ts,config.ts}`
 - Test: `backend/agent/test/config.test.ts`
 - Modify: root `vitest.config.ts`, adding `'backend/agent'` to projects
 
 **Interfaces (Produces):**
+
 - `interface Env`:
   - `CONFIG: KVNamespace`
   - `KB: R2Bucket`
@@ -124,6 +129,7 @@
   - `resetConfigCache()` is exported for tests.
 
 **Setup:**
+
 - `package.json` name `agent`. Dependencies: `agents`, `@cloudflare/ai-chat`, `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`, `@cloudie/protocol`, `zod`. Dev dependencies match `backend/api`.
 - Scripts:
   - `dev`: `wrangler dev --port 8787 --persist-to ../../.wrangler/state`
@@ -155,10 +161,12 @@
 **Files:** Create `backend/agent/src/models.ts`. Test in `backend/agent/test/models.test.ts`.
 
 **Interfaces:**
+
 - Consumes `AssistantConfig` and `Env`.
 - Produces `resolveModel(config: AssistantConfig, env: Env): { model: LanguageModel; providerOptions: SharedV3ProviderOptions; cacheSystem: boolean }`. It throws `MissingKeyError` when the provider has neither `CF_AIG_TOKEN` nor its own key.
 
 **Behaviour:**
+
 - If `env.MOCK_MODEL` is set, return a `MockLanguageModelV3` (from `ai/test`) that streams back the text `"echo: <last user text>"`, or for `'fail'` throws.
 - Otherwise build the provider with `baseURL = ${AI_GATEWAY_URL}/<anthropic|openai|google-ai-studio>` and `headers: {'cf-aig-authorization': 'Bearer ' + CF_AIG_TOKEN}` when the token is set.
   - The provider `apiKey` is the provider's secret if present; otherwise a placeholder, so the gateway supplies the stored BYOK key.
@@ -180,6 +188,7 @@
 **Files:** Create `backend/agent/src/kb.ts`. Test in `backend/agent/test/kb.test.ts`.
 
 **Interfaces (Produces):**
+
 - `loadKb(env: Env, version: string): Promise<Kb | null>`, with `type Kb = { version: string; prompt: string; instructions: string; manifest: KbManifest }`.
 - The R2 layout, written by Task 10:
   - `kb/<version>/instructions.md`
@@ -204,6 +213,7 @@
 **Interfaces (Produces):** `fetchPageTool(opts: { fetch?: typeof fetch; maxUses?: number }): Tool`. It is an AI SDK `tool()` with input `{ url: string }` and output `{ url, title, text } | { error: string }`. It keeps a per-instance use counter, so build a new tool every turn.
 
 **Rules:**
+
 - Allow only `http` or `https`.
 - Refuse these hosts:
   - `engaging.io` and its subdomains
@@ -228,12 +238,14 @@
 **Files:** Create `backend/agent/src/agent.ts` and `backend/agent/src/prompt.ts`; modify `src/index.ts`. Test in `backend/agent/test/agent.test.ts`.
 
 **Interfaces:**
+
 - Consumes `loadConfig`, `resolveModel`, `loadKb` and `fetchPageTool`.
 - Produces `class SalesAgent extends AIChatAgent<Env, AgentState>`.
 - Produces `buildSystem(kb: Kb, cacheSystem: boolean): SystemModelMessage[]`, which returns `[instructions, kb.prompt]`. The second message carries `providerOptions.anthropic.cacheControl = {type:'ephemeral', ttl:'1h'}` when `cacheSystem` is true.
 - `FALLBACK_TEXT` is the exact contact message from the old `index.js`, converted to markdown.
 
 **Behaviour:**
+
 - `onConnect(conn, ctx)`:
   - store `ctx.request.headers.get('cf-connecting-ip')` on the connection state
   - load the config and the KB
@@ -263,6 +275,7 @@
 ### Task 8: Pages proxy with guards
 
 **Files:**
+
 - Create: `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts`
 - Modify:
   - `backend/api/functions/_lib/env.ts`: add `AGENT: Fetcher`, `CONNECT_LIMIT: RateLimit`, `TURNSTILE_SECRET: string`, `PASS_SECRET: string`, `ALLOWED_ORIGINS: string`
@@ -272,17 +285,20 @@
 - Test: `backend/api/functions-test/agents.test.ts`
 
 **Interfaces (Produces):**
+
 - `checkOrigin(req, allowed: string[]): boolean`
 - `verifyTurnstile(token, secret, ip, fetchFn = fetch): Promise<boolean>`, which calls `https://challenges.cloudflare.com/turnstile/v0/siteverify`
 - `signPass(secret, now): Promise<string>` and `verifyPass(cookie, secret, now): Promise<boolean>`, using HMAC-SHA256 over the expiry, valid for 12 hours
 
 **Order of checks** in `onRequest`:
+
 1. Only path prefix `/agents/sales-agent/` is accepted; anything else gets `error(404)`.
 2. A bad Origin gets `error(403,'Forbidden')`.
 3. A failed `CONNECT_LIMIT` check gets `error(429,'Too many connections')`.
 4. A valid `chat_pass` cookie, or `?cf_turnstile=` passing siteverify, is required; otherwise `error(401,'Verification required')`.
 5. Then `env.AGENT.fetch(request)`. When Turnstile was used, append `Set-Cookie: chat_pass=...; Path=/agents; Secure; HttpOnly; SameSite=None; Partitioned; Max-Age=43200` to the response.
    - The 101 upgrade response's headers are copied into a new `Response(null,{status:101, webSocket, headers})`.
+
 - Non-WebSocket GET and POST to the agent path (the Agents SDK uses HTTP for message fetches) pass through the same guards.
 
 - [ ] **Step 1: Write the failing tests.**
@@ -300,11 +316,13 @@
 ### Task 9: Chat page
 
 **Files:**
+
 - Create: `web/src/lib/chat/{render.ts,session.ts,chat.svelte.ts}`, `web/src/lib/chat/Turnstile.svelte`, `web/src/routes/chat/+page.svelte`, `web/vitest.config.ts`
 - Test: `web/test/render.test.ts`
 - Modify: `web/package.json`, root `vitest.config.ts` (add `'web'`), `web/static/_headers`
 
 **Interfaces (Produces):**
+
 - `renderReply(markdown: string, allowlist: string[]): string`. It renders with `marked`. Through `walkTokens`, a `link` token whose `href` (normalised, without the trailing slash) is not in the allowlist becomes a text token. The result is sanitised with `DOMPurify` (installed with `isomorphic-dompurify` or a jsdom test environment). Every remaining `<a>` gets `target="_blank" rel="noopener"`.
 - `sessionId(): string` keeps a `crypto.randomUUID()` in `sessionStorage` key `chat-session`.
 - `createChat(opts: { turnstileToken: string }): { chat: Chat; state: { current: AgentState | null } }`.
@@ -313,6 +331,7 @@
   - It subscribes to the client's state updates.
 
 **Page:**
+
 - The message list, `{@html renderReply(...)}` for assistant parts, a textarea that sends on Enter and is capped at 4000 characters, and an invisible Turnstile widget.
 - The site key comes from `PUBLIC_TURNSTILE_SITEKEY` (a Vite env var, set at build time from the Terraform output).
 - A "New chat" button clears `sessionStorage` and reloads.
@@ -320,6 +339,7 @@
 - The footer reads "powered by AI".
 
 **`_headers` for `/chat`:**
+
 - `Content-Security-Policy: frame-ancestors 'self' https://*.hubspot.com <HUBSPOT_ORIGIN>; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com`
 - Take the HubSpot origin from the old repo's `README.md` or `MIGRATION.md`. If you can't find it, leave a `TODO(user)` marker in `_headers` and list it in the hand-off.
 
@@ -334,16 +354,19 @@
 ### Task 10: Knowledge base files and tooling
 
 **Files:**
+
 - Create: `knowledge/instructions.md`, `knowledge/case-studies/*.md`, `knowledge/README.md`
 - Create: `scripts/kb/{lib.ts,split.ts,check.ts,build.ts,publish.sh}`, `scripts/kb/vitest.config.ts`, `scripts/kb/test/kb.test.ts`, `scripts/kb/test/fixtures/`
 - Modify: root `package.json` (scripts `kb:check` and `kb:build`), root `vitest.config.ts` (add `'scripts/kb'`), `scripts/cli.sh`, `.github/workflows/kb.yml`, `.gitignore` (`dist/`)
 
 **Interfaces (Produces):**
+
 - `parseCaseStudy(path, text): { meta: CaseStudyFrontmatter; body: string }`
 - `checkKb(dir): { errors: string[]; warnings: string[]; tokens: number }`. Tokens are estimated as `Math.ceil(chars / 3.5)`.
 - `buildKb(dir, outDir): KbManifest`. It writes `outDir/<version>/{instructions.md,prompt.md,manifest.json}`, where `version` is the first 12 hex characters of the SHA-256 of the inputs.
 
 **Checks (errors):**
+
 - the frontmatter is invalid
 - a `published` entry has no engaging.io URL
 - two files share a slug
@@ -354,6 +377,7 @@
 **Checks (warnings):** the token estimate is over 120k.
 
 **Build:**
+
 - Drop `excluded` and `never_disclose` files.
 - For `draft` files, remove the `### Results` and `### Impact` sections and any quote blocks.
 - The index is generated as one block per file: display_name, Naming (from status), Industry, Region, HubSpot licensing, Link (url or "none published"), Summary (the first paragraph of the body).
@@ -362,6 +386,7 @@
 - `manifest.allowlist` is every `url` that is not null and goes into the bundle.
 
 **`split.ts`** (a one-off migration, run once and committed with its output):
+
 - Reads `../engaging-assistant/knowledge/`.
 - Parses `case_study_index.md` records (`**Name**` followed by `Field: value` lines) under their `##` sections, and maps each section to a status.
 - Splits `case_studies_*.md` at `^# ` headings and drops the "Quick prompt example" heading.
@@ -373,16 +398,19 @@
 - `instructions.md` is copied, with its HTML output section rewritten to ask for markdown (headings, bold, bullet lists, links only from the index). The index and URL-list sections are removed, because the build now generates them. The closing contact lines stay.
 
 **`publish.sh`:**
+
 - Runs `pnpm kb:build`.
 - Puts each file with `wrangler r2 object put cloudie-kb/kb/<v>/<file> --remote`.
 - Reads the KV `config`, sets `kbVersion`, and puts it back with `wrangler kv key put config --binding CONFIG --remote`, run from `backend/agent`.
 
 **CLI actions** (in `scripts/cli.sh` under a new `MENU_ASSISTANT` group, which also goes in `MENUS` and in the `menu()` case):
+
 - `act_kb_check`
 - `act_kb_publish`, which confirms with gum before running
 - `act_ai_config`, which shows the KV `config`, opens `$EDITOR` on a temp copy, validates it with a small `node -e` script using `AssistantConfig`, then puts it
 
 **CI** (`.github/workflows/kb.yml`):
+
 - On pull requests touching `knowledge/**`: `pnpm kb:check`.
 - On push to `main` touching `knowledge/**`, when `vars.DEPLOY_ENABLED == 'true'`: `bash scripts/kb/publish.sh` with `CLOUDFLARE_API_TOKEN`.
 
@@ -402,6 +430,7 @@
 **Files:** Modify `backend/infra/{main.tf,variables.tf,outputs.tf}`, `scripts/tokens.sh`, `backend/agent/wrangler.toml`, `backend/api/wrangler.toml` and `scripts/cli.sh` (`act_infra_sync`, if it writes IDs into wrangler.toml; extend it to write the agent IDs too).
 
 **Resources:**
+
 - `cloudflare_workers_kv_namespace.config`, titled `cloudie-config`
 - `cloudflare_r2_bucket.kb`, named `cloudie-kb`, with `prevent_destroy`
 - `cloudflare_ai_gateway.assistant`:
@@ -426,6 +455,7 @@
 ### Task 12: Docs, end-to-end test, final check
 
 **Files:**
+
 - Modify: `docs/architecture/overview.md` (the spec's mermaid diagram, resource table rows, glossary entries for Durable Object, AI Gateway, BYOK, Turnstile and KV), `docs/_sidebar.md`, `docs/guide/cli.md`, `docs/operations/deploy.md`, `CLAUDE.md` (stack line for `backend/agent`, a rule that the knowledge base changes through `knowledge/` and `kb:check`)
 - Create: `docs/guide/assistant.md`, covering:
   - changing the model (`./cli.sh ai-config`, with a table of fields)
