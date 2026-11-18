@@ -18,11 +18,11 @@ Operations for the stadium's motorsport event brand, the first business unit of 
 
 ## **Summary of the business:**
 
-The stadium hosts the stadium's motorsport event, one of the most dynamic races in the F1 calendar. Known for its fast-paced spectacle and luxury experiences, the Grand Prix team needed a streamlined platform to manage marketing, sales, and service across multiple channels.
+The stadium hosts the stadium's motorsport event, a major international motorsport event. Known for its fast-paced spectacle and luxury experiences, the motorsport event team needed a streamlined platform to manage marketing, sales, and service across multiple channels.
 
 ## **Summary of the project scope:**
 
-* Implementation of HubSpot Marketing Hub Enterprise for Grand Prix BU
+* Implementation of HubSpot Marketing Hub Enterprise for the motorsport event BU
 * Integration with Databricks and Microsoft Dynamics
 * Email and campaign strategy planning
 * Lead scoring model creation
@@ -48,7 +48,7 @@ Sports & Entertainment
 
 **Results:**
 
-The Grand Prix team launched with automated lead flows, real-time reporting, and campaign triggers across form submissions and ads. The BU was operational and executing high-impact email campaigns before the December event.
+The motorsport event team launched with automated lead flows, real-time reporting, and campaign triggers across form submissions and ads. The BU was operational and executing high-impact email campaigns before the December event.
 
 **Award Category:** Platform Excellence
 
@@ -64,7 +64,7 @@ Improved coordination between marketing, sales, and external data partners like 
 
 ### Solution
 
-We kicked off Phase 1 by aligning Grand Prix’s tech stack with HubSpot, connecting their data via Databricks and layering on a native Dynamics integration for sales. With HubSpot Marketing Hub Enterprise, we transitioned 10+ lead capture forms into the platform, capturing submissions from websites, Meta, and LinkedIn into one consistent funnel.
+We kicked off Phase 1 by aligning the motorsport event’s tech stack with HubSpot, connecting their data via Databricks and layering on a native Dynamics integration for sales. With HubSpot Marketing Hub Enterprise, we transitioned 10+ lead capture forms into the platform, capturing submissions from websites, Meta, and LinkedIn into one consistent funnel.
 
 We configured lifecycle stages to reflect business unit journeys, built custom dashboards, and introduced lead scoring models tailored for subscribers and leads. This helped the team understand when a subscriber became sales-ready, triggering automated handoffs.
 
@@ -74,7 +74,7 @@ Email templates and branding assets were standardised, and segmentation based on
 
 ### Results
 
-By the time the first pre-sale campaign launched in November, the Grand Prix BU was running a full-funnel system in HubSpot. Forms were embedded across platforms and captured in real-time, populating segmented lists by interest type. The initial nurture flow saw strong engagement, with high open and click-through rates, and hundreds of contacts progressing from subscriber to lead within weeks.
+By the time the first pre-sale campaign launched in November, the motorsport event BU was running a full-funnel system in HubSpot. Forms were embedded across platforms and captured in real-time, populating segmented lists by interest type. The initial nurture flow saw strong engagement, with high open and click-through rates, and hundreds of contacts progressing from subscriber to lead within weeks.
 
 Hospitality interest was flagged through form fills and scoring triggers, with warm leads routed to sales in under five minutes thanks to the Dynamics integration. In one campaign alone, the sales team successfully identified and followed up with high-intent leads. Automated lifecycle flows also reduced manual effort, allowing the team to shift focus to strategy over execution.
 
@@ -90,7 +90,7 @@ A custom lead scoring model ensured only the most sales-ready contacts were pass
 
 The internal impact was equally impressive. Shared access to a centralised toolset fostered tighter collaboration between teams, while automation and reusable templates cut campaign build time by more than 40%. The entire marketing cycle became more agile, efficient, and aligned.
 
-From the fan’s perspective, the experience was smooth and engaging—communications were timely, tailored, and connected from the first click to the final purchase. This not only boosted conversion metrics but also helped position the stadium's motorsport event as a leader in digital fan engagement within the highly competitive F1 event landscape.
+From the fan’s perspective, the experience was smooth and engaging—communications were timely, tailored, and connected from the first click to the final purchase. This not only boosted conversion metrics but also helped position the stadium's motorsport event as a leader in digital fan engagement within highly competitive live event landscape.
 
 ### Future Growth
 

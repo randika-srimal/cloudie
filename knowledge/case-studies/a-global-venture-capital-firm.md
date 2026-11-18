@@ -145,5 +145,3 @@ Award Categories:
 * **Platform Migration Excellence** - an example demonstrating expertise in migrating a customer from a legacy platform/system to HubSpot. It must involve the complete removal of the old platform.
 * **Technical Expertise** - an example showing deep technical knowledge and expertise that enabled customers to overcome business challenges and improve processes, through a tailored, custom and complex solution. Case studies for this award should include a custom build, such as an app, a platform, custom integration, APIs, or design.
 * **Product Excellence** - an example of providing value with a single product, demonstrating expertise in delivering a single hub solution.
-
-**AFTRS**

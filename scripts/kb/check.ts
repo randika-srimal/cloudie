@@ -8,7 +8,9 @@ import {
   estimateTokens,
   FAIL_TOKENS,
   loadKb,
+  foldAccents,
   nameRegExp,
+  restrictedNameMatcher,
   render,
   WARN_TOKENS,
   type LoadedKb,
@@ -55,9 +57,15 @@ export function checkKb(dir: string): CheckResult {
     ['instructions.md', rendered.instructions],
     ...rendered.included.map((s): [string, string] => [s.file, rendered.parts.get(s.slug) ?? '']),
   ];
+  // Link URLs are the client-approved public pages and cannot be changed here, so they are not scanned: a
+  // restricted word inside one (e.g. "grand-prix" in a page slug) is allowed there and nowhere else.
+  const scanned = uploaded.map(([file, text]): [string, string] => [
+    file,
+    foldAccents(rendered.allowlist.reduce((t, url) => t.split(url).join(' '), text)),
+  ]);
   for (const { name, why } of restrictedNames(kb)) {
-    const re = nameRegExp(name);
-    for (const [file, text] of uploaded)
+    const re = restrictedNameMatcher(name);
+    for (const [file, text] of scanned)
       if (re.test(text))
         errors.push(`${file}: contains "${name}" (${why}), which must never be uploaded`);
   }

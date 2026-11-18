@@ -136,6 +136,45 @@ describe('checkKb', () => {
     expect(errors.join('\n')).toMatch(/acme-retail.*Globex Corporation/);
   });
 
+  it.each([
+    ['hyphenated', 'Globex-Corporation'],
+    ['underscored', 'Globex_Corporation'],
+    ['joined', 'GlobexCorporation'],
+    ['emphasised', '**Globex** Corporation'],
+    ['accented', 'Glöbéx Corporation'],
+    ['in a slug', 'see /case-studies/globex-corporation-wins'],
+    ['in code', '`globex corporation`'],
+  ])('reports a restricted name written %s', (_, written) => {
+    removePlant();
+    edit('acme-retail.md', (t) => `${t}\nPartner: ${written}.\n`);
+    expect(checkKb(dir).errors.join('\n')).toMatch(/acme-retail.*Globex Corporation/);
+  });
+
+  it('reports "&" and "and" spellings of a name with "&" in it', () => {
+    removePlant();
+    writeFileSync(join(dir, 'never-disclose.txt'), 'Kraft & Heinz\n');
+    edit('acme-retail.md', (t) => t + '\nKraftHeinz and Kraft and Heinz.\n');
+    expect(checkKb(dir).errors).toHaveLength(1);
+  });
+
+  it('reports a restricted name in the file name, which becomes the uploaded document name', () => {
+    removePlant();
+    cpSync(file('hooli.md'), file('globex-corporation.md'));
+    rmSync(file('hooli.md'));
+    expect(checkKb(dir).errors.join('\n')).toMatch(/globex-corporation\.md.*Globex Corporation/);
+  });
+
+  it('does not scan Link URLs (approved public pages), but does scan the same words elsewhere', () => {
+    removePlant();
+    writeFileSync(join(dir, 'never-disclose.txt'), 'Acme Stores\n');
+    edit('acme-retail.md', (t) =>
+      t.replace('case-studies/acme-retail"', 'case-studies/how-acme-stores-grew"'),
+    );
+    expect(checkKb(dir).errors).toEqual([]);
+    edit('acme-retail.md', (t) => t + '\nSee acme-stores.com.\n');
+    expect(checkKb(dir).errors.join('\n')).toMatch(/acme-retail.*Acme Stores/);
+  });
+
   it('matches names as whole words only', () => {
     removePlant();
     writeFileSync(join(dir, 'never-disclose.txt'), 'Ace\n');

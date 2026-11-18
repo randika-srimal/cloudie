@@ -62,7 +62,17 @@ const ANON_REPLACE: Record<string, [string, string][]> = {
     ['Hard Rock Stadium Concerts', "the stadium's concert brand"],
     ['Miami Dolphins', "the stadium's football team"],
     ['Dolphins', 'the football team'],
+    ['Miami Open Tennis', "the stadium's tennis tournament"],
     ['Miami Open', "the stadium's tennis tournament"],
+    ['Hard Rock Stadium (Concerts)', "the stadium's concert brand"],
+    // Identifying detail beyond the names: the event, league and calendar.
+    ['one of the most dynamic races in the F1 calendar', 'a major international motorsport event'],
+    ['highly competitive F1 event landscape', 'highly competitive live event landscape'],
+    ['F1', 'motorsport'],
+    ['Grand Prix', 'the motorsport event'],
+    ['NFL franchise', 'professional football team'],
+    ['NFL season', 'football season'],
+    ['NFL', 'football'],
     ['Hard Rock Stadium', 'the stadium'],
     ['Hard Rock', 'the stadium'],
     ['HRS', 'the stadium'],
@@ -77,6 +87,8 @@ const ANON_REPLACE: Record<string, [string, string][]> = {
     ['Lake House', 'the luxury hospitality group'],
     ['Lakehouse', 'the luxury hospitality group'],
     ['Daylesford', 'its regional town'],
+    ['Dairy Flat Farm', 'its farm'],
+    ['Wombat Hill House', 'a second venue'],
   ],
   'A global food and beverage manufacturer': [
     ['Kraft Heinz', 'the global food and beverage manufacturer'],
@@ -92,6 +104,41 @@ const ANON_REPLACE: Record<string, [string, string][]> = {
     ['MMPLM network', 'network'],
     ['MMPLM', 'the entity'],
     ['MMP', 'the entity'],
+    // Identifying detail beyond the name: founding date, land type, region and the named cemeteries.
+    [
+      'rebranded it from SMCNSW to MMPLM, updating URLs to mmplm.com.au',
+      'rebranded it for the entity, updating its web addresses',
+    ],
+    [
+      'established in July 2023 to manage Crown Land cemeteries across Greater Sydney',
+      'that manages public cemeteries',
+    ],
+    [
+      'oversees eight cemeteries across Greater Sydney, including Rookwood, Macquarie Park, Woronora, and Eastern Suburbs Memorial Park',
+      'oversees a network of cemeteries',
+    ],
+    [
+      'Rookwood Memorial Gardens and Macquarie Park Cemetery and Crematorium',
+      'two further large sites',
+    ],
+    [
+      'original SMCNSW portal covered only Woronora and Eastern Suburbs',
+      'the original portal covered only two sites',
+    ],
+    ['Woronora and Eastern Suburbs Memorial Park', 'its first two sites'],
+    ['PlotBox (Rookwood)', 'PlotBox (at its largest cemetery)'],
+    ['PlotBox at Rookwood', 'PlotBox at its largest cemetery'],
+    ['When Rookwood came online', 'When its largest cemetery came online'],
+    ['When MPCC followed', 'When the next site followed'],
+    ['Rookwood', "the entity's largest cemetery"],
+    ['Macquarie Park', 'another site'],
+    ['Woronora', 'another site'],
+    ['Eastern Suburbs Memorial Park', 'another site'],
+    ['Eastern Suburbs', 'another site'],
+    ['SMCNSW', 'its predecessor'],
+    ['MPCC', 'another site'],
+    ['Greater Sydney', 'its region'],
+    ['Crown Land', 'public'],
   ],
 };
 
@@ -194,6 +241,8 @@ function unescapeGoogleDocs(text: string): string {
   return text.replace(/\\([\\`*_{}[\]()#+\-.!:<>|~&=$'"])/g, '$1');
 }
 
+/** Documents the exports run on without a title line: split at these headings (title = heading text). */
+const SPLIT_AT = [/^#{1,6}\s+Custom-built membership portal and database migration for IICT\s*$/];
 const BOLD_TITLE = /^\*\*([^*].*?)\*\*\s*$/;
 const H1 = /^#\s+(.*?)\s*$/;
 const NOT_A_TITLE = /^(?:\**\s*)?(?:PROJECT DEBRIEF|Blog Case Study Content|Award Category)\b/i;
@@ -201,20 +250,29 @@ const NOT_A_TITLE = /^(?:\**\s*)?(?:PROJECT DEBRIEF|Blog Case Study Content|Awar
 /** Splits a combined export into documents: a `# Title` heading, or a lone bold line followed by `---`. */
 function splitDocuments(text: string): { title: string; body: string }[] {
   const lines = text.split('\n');
-  const nextNonBlank = (i: number) => {
-    for (let j = i + 1; j < lines.length; j++) if (lines[j]!.trim()) return lines[j]!.trim();
-    return '';
+  const nextIndex = (i: number) => {
+    for (let j = i + 1; j < lines.length; j++) if (lines[j]!.trim()) return j;
+    return lines.length;
   };
+  const at = (j: number) => lines[j]?.trim() ?? '';
+  const startsDocument = (l: string) => l === '---' || H1.test(l);
   const docs: { title: string; lines: string[] }[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const h1 = H1.exec(line)?.[1]?.replace(/\*\*/g, '').trim();
     const bold = BOLD_TITLE.exec(line.trim())?.[1];
-    const next = nextNonBlank(i);
+    const split = SPLIT_AT.some((re) => re.test(unescapeGoogleDocs(line)))
+      ? unescapeGoogleDocs(line).replace(/^#+\s*/, '')
+      : undefined;
+    const n1 = nextIndex(i);
+    // A bold title may be followed by a second bold line (a long name) before the --- rule.
+    const boldTitleNext =
+      startsDocument(at(n1)) || (BOLD_TITLE.test(at(n1)) && startsDocument(at(nextIndex(n1))));
     const isTitle =
+      split !== undefined ||
       (h1 && !NOT_A_TITLE.test(h1)) ||
-      (bold && (next === '---' || H1.test(next)) && !NOT_A_TITLE.test(bold));
-    const title = (h1 || bold || '').trim();
+      (bold && boldTitleNext && !NOT_A_TITLE.test(bold));
+    const title = (split || h1 || bold || '').trim();
     const current = docs.at(-1);
     // A title right after another title with nothing in between (only rules and empty headings) is a
     // subtitle of the same document.

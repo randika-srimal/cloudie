@@ -28,10 +28,20 @@ for file in instructions.md prompt.md manifest.json; do
   wrangler r2 object put "$BUCKET/kb/$version/$file" --file "$ROOT/$dir/$file" --content-type "$type" --remote
 done
 
-# Merge kbVersion into the current config; with no config saved yet, start from the defaults.
-# (Wrangler prints "Value not found" for a missing key; any other failure stops the script.)
-current="$(wrangler kv key get config --binding CONFIG --remote)"
-[[ "$current" == *"Value not found"* ]] && current=""
+# Merge kbVersion into the current config; with no config saved yet, start from the defaults. With --remote,
+# `kv key get` on a missing key fails (404) just like an auth or network error, so look the key up in the
+# listing first and let any other failure stop the script.
+keys="$(wrangler kv key list --binding CONFIG --remote --prefix config)"
+exists="$(KEYS="$keys" node -e '
+  const raw = process.env.KEYS;
+  const keys = JSON.parse(raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1));
+  process.stdout.write(keys.some((k) => k.name === "config") ? "yes" : "no");
+')"
+current=""
+if [[ "$exists" == yes ]]; then
+  current="$(wrangler kv key get config --binding CONFIG --remote)"
+fi
+# safeParse drops keys AssistantConfig does not know, so an unknown setting in the saved config is removed.
 next="$(
   CURRENT="$current" VERSION="$version" node --experimental-strip-types --input-type=module -e '
     import { AssistantConfig, DEFAULT_CONFIG } from "./shared/protocol/src/index.ts";

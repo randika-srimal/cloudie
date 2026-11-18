@@ -294,8 +294,18 @@ act_kb_publish() {
 act_ai_config() {
   ensure_cloudflare
   local current tmp
-  current="$(agent_wrangler kv key get config --binding CONFIG --remote)" || { fail "Could not read the config"; return 1; }
-  if [[ -z "$current" || "$current" == *"Value not found"* ]]; then
+  # With --remote, `kv key get` on a missing key fails (404) like any other error, so check the listing first.
+  local keys exists
+  keys="$(agent_wrangler kv key list --binding CONFIG --remote --prefix config)" || { fail "Could not list the KV keys"; return 1; }
+  exists="$(KEYS="$keys" node -e '
+    const raw = process.env.KEYS;
+    const keys = JSON.parse(raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1));
+    process.stdout.write(keys.some((k) => k.name === "config") ? "yes" : "no");')" || { fail "Unexpected kv key list output"; return 1; }
+  current=""
+  if [[ "$exists" == yes ]]; then
+    current="$(agent_wrangler kv key get config --binding CONFIG --remote)" || { fail "Could not read the config"; return 1; }
+  fi
+  if [[ -z "$current" ]]; then
     note "No config saved yet; starting from the defaults."
     current="$(node --experimental-strip-types --input-type=module -e '
       import { DEFAULT_CONFIG } from "./shared/protocol/src/index.ts";
@@ -313,6 +323,7 @@ act_ai_config() {
       let value;
       try { value = JSON.parse(readFileSync(process.argv[1], "utf8")); }
       catch (e) { console.error(`Not JSON: ${e.message}`); process.exit(1); }
+      // safeParse drops unknown keys; this only validates, and the file is saved as written.
       const parsed = AssistantConfig.safeParse(value);
       if (!parsed.success) {
         for (const i of parsed.error.issues) console.error(`${i.path.join(".") || "(config)"}: ${i.message}`);

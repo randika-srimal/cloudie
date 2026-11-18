@@ -62,8 +62,13 @@ a generated case study index (`<case_study_index>`) followed by every uploadable
 - a file's frontmatter is missing or invalid, or a `published` file has no www.engaging.io `url`
 - two files share a slug
 - a name from `never-disclose.txt`, the `client` of a `never_disclose` file, or the real `client` name of an
-  `anonymous` file appears in `instructions.md` or in any uploaded case study (whole words, any letter case).
-  Write-ups copied from debriefs often name the client: replace the name with the descriptor
+  `anonymous` file appears in `instructions.md` or in any uploaded case study, including its file name (the
+  slug is uploaded as the document name). Matching ignores letter case and accents, and accepts the words of a
+  name run together or joined by hyphens, underscores, dots, slashes, markdown emphasis or "&"/"and"
+  ("HardRock", "hard-rock", "**Hard** Rock" all match "Hard Rock"), but only as whole words. The `url` values
+  are not scanned: they are the client-approved public pages, so a restricted word in a page address (such as
+  "grand-prix") is allowed there and nowhere else. Write-ups copied from debriefs often name the client, or
+  give it away with venues, events or dates: replace those with generic descriptions
 - Google Docs escapes are left in the text (`\*`, `https\:`)
 - the bundle is over 180,000 tokens (estimated as characters ÷ 3.5); over 120,000 it only warns
 

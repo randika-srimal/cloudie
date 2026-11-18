@@ -336,9 +336,36 @@ export function render(kb: LoadedKb): Rendered {
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** A case-insensitive whole-word matcher for `name` (letters or digits may not touch either end). */
+/**
+ * An exact-phrase matcher (any whitespace between words, letters or digits may not touch either end). For
+ * the migration's replacements; the confidentiality check uses the looser `restrictedNameMatcher`.
+ */
 export const nameRegExp = (name: string, flags = 'iu'): RegExp =>
   new RegExp(
     `(?<![\\p{L}\\p{N}])${escapeRegExp(name.trim()).replace(/\s+/g, '\\s+')}(?![\\p{L}\\p{N}])`,
     flags,
   );
+
+/** Unicode NFKD with accents removed, so "Baillié" reads as "Baillie". */
+export const foldAccents = (s: string): string => s.normalize('NFKD').replace(/\p{M}+/gu, '');
+
+/**
+ * What may sit between the words of a restricted name and still spell it: nothing ("HardRock"), spaces,
+ * hyphens ("hard-rock-stadium", a slug), underscores, dots, slashes, markdown emphasis ("**Hard** Rock"),
+ * and "&" or "and" ("Kraft & Heinz").
+ */
+const NAME_GAP = '(?:[\\s\\-_.*`~/]|&|and)*';
+
+/**
+ * Matches `name` the way the confidentiality check needs: case-insensitive, accent-insensitive (test it
+ * against `foldAccents(text)`), with any NAME_GAP between its words, and still whole-word at both ends so
+ * "NBS" does not match inside "unbsure" and "Ace" not inside "space".
+ */
+export function restrictedNameMatcher(name: string): RegExp {
+  const words = foldAccents(name)
+    .replace(/&/g, ' and ')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map(escapeRegExp);
+  return new RegExp(`(?<![\\p{L}\\p{N}])${words.join(NAME_GAP)}(?![\\p{L}\\p{N}])`, 'iu');
+}

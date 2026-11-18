@@ -18,7 +18,7 @@ Implemented Marketing Hub Enterprise across four major event and venue brands ov
 
 ## **Summary of the business:**
 
-The stadium is a world-class entertainment venue in Miami, home to the stadium's football team, the stadium's tennis tournament Tennis, the stadium's motorsport event, and a suite of international concerts and major events. With a rapidly growing event calendar and segmented brand experiences, the stadium marketing and sales teams needed a cohesive platform to manage operations, unify data, and deliver personalization at scale.
+The stadium is a world-class entertainment venue in Miami, home to the stadium's football team, the stadium's tennis tournament, the stadium's motorsport event, and a suite of international concerts and major events. With a rapidly growing event calendar and segmented brand experiences, the stadium marketing and sales teams needed a cohesive platform to manage operations, unify data, and deliver personalization at scale.
 
 ## **Summary of the project scope:**
 
@@ -59,7 +59,7 @@ The project transformed the stadium’s marketing operations into a multi-brand 
 
 the stadium set out to unify and elevate its marketing operations across a dynamic, multi-brand environment. With a packed calendar of high-profile events and a diverse portfolio of brands operating under one roof, the team recognized the need for a more connected, scalable approach to customer engagement and data management.
 
-Each brand needed autonomy for creative execution but demanded centralised oversight and infrastructure to manage shared fans and stakeholders. Timely segmentation, lifecycle management, and campaign personalisation were mission-critical for major events like the stadium's motorsport event and NFL season launches, where marketing speed directly impacted ticket sales and sponsorship opportunities.
+Each brand needed autonomy for creative execution but demanded centralised oversight and infrastructure to manage shared fans and stakeholders. Timely segmentation, lifecycle management, and campaign personalisation were mission-critical for major events like the stadium's motorsport event and football season launches, where marketing speed directly impacted ticket sales and sponsorship opportunities.
 
 Improved automation, lead scoring, lifecycle stages and website tracking were top of mind, along with the ability to make data-driven decisions faster through clearer reporting. With critical deadlines for major events on the horizon, the stadium’s internal teams were ready to invest in a platform that could streamline operations, support smarter segmentation that the marketing team could manage, and drive long-term digital transformation at the enterprise level.
 
@@ -73,7 +73,7 @@ Engaging.io partnered with the stadium to design and execute a phased rollout st
 
 Other key elements of the solution included:
 
-* **Phased Brand Launch**: The stadium's motorsport event launched first as a proof of concept, establishing data structures, integrations, and full campaign processes before scaling to the stadium's tennis tournament, the stadium's football team, and the stadium (Concerts).
+* **Phased Brand Launch**: The stadium's motorsport event launched first as a proof of concept, establishing data structures, integrations, and full campaign processes before scaling to the stadium's tennis tournament, the stadium's football team, and the stadium's concert brand.
 * **Modular Systems**: Built brand-specific workspaces with dedicated branding, lead scoring, lifecycle stages, forms, subscription centers, and reporting dashboards.
 * **Dynamic Content Strategy**: Developed modular email templates and dynamic content blocks, allowing each brand creative flexibility while maintaining consistency and operational efficiency.
 
@@ -81,7 +81,7 @@ This structure empowered the stadium to transition to a future-proof marketing e
 
 ### Results
 
-The results of this multi-brand rollout were transformative. Each brand is now live and running its own campaigns inside HubSpot, with common infrastructure powering divergent audience experiences. The Grand Prix launched first, setting the standard with lead scoring, lifecycle management, nurture workflows, and integrated data flows from numerous 3rd party platforms.
+The results of this multi-brand rollout were transformative. Each brand is now live and running its own campaigns inside HubSpot, with common infrastructure powering divergent audience experiences. The motorsport event launched first, setting the standard with lead scoring, lifecycle management, nurture workflows, and integrated data flows from numerous 3rd party platforms.
 
 Contact data is now unified and enriched—each brand can segment and engage their audiences in real time, while leadership can access roll-up reporting across brands. Teams report 40–50% reductions in campaign setup time thanks to reusable assets and automation.
 
@@ -106,7 +106,7 @@ Crucially, the stadium’s internal teams are now empowered to operate proactive
 
 ## **Summary of the business:**
 
-As the flagship NFL franchise under the stadium umbrella, the stadium's football team needed a system that could power complex marketing and sales journeys across multiple fan segments—from single-game buyers to season ticket members and premium hospitality clients. With a mission to deepen fan engagement and streamline internal operations, their team turned to HubSpot.
+As the flagship professional football team under the stadium umbrella, the stadium's football team needed a system that could power complex marketing and sales journeys across multiple fan segments—from single-game buyers to season ticket members and premium hospitality clients. With a mission to deepen fan engagement and streamline internal operations, their team turned to HubSpot.
 
 ## **Summary of the project scope:**
 
@@ -123,7 +123,7 @@ January 2025 – March 2025
 
 **Industry:**
 
-Sports & Entertainment (NFL)
+Sports & Entertainment (football)
 
 **Licensing/ Key Products:**
 
@@ -168,7 +168,7 @@ With HubSpot fully deployed, the football team marketing team launched a series 
 
 Marketing gained the tools to build complex journeys once and reuse them for different cohorts. Sales benefited from clearer visibility into which leads were “warm” and ready for outreach. Real-time integration with Dynamics ensured data stayed in sync and allowed reps to act on leads faster. Workflows helped ensure contacts weren't lost between systems or teams, and time-to-first-touch decreased noticeably during peak campaigns.
 
-Reporting dashboards provided a single source of truth for leadership, enabling weekly reviews of lead performance, campaign attribution, and conversion rates. Previously, ad hoc insights could now be consistently reviewed, driving better spend allocation and creative optimisation. All of this positioned the football team for a stronger sales cycle going into the next NFL season, with automated systems reducing workload and boosting responsiveness.
+Reporting dashboards provided a single source of truth for leadership, enabling weekly reviews of lead performance, campaign attribution, and conversion rates. Previously, ad hoc insights could now be consistently reviewed, driving better spend allocation and creative optimisation. All of this positioned the football team for a stronger sales cycle going into the next football season, with automated systems reducing workload and boosting responsiveness.
 
 ### Impact
 

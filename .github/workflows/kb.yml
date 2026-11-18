@@ -4,7 +4,7 @@ name: Knowledge base
 # without a deploy. Pull requests run the checks; a merge to main publishes (once deploys are turned on).
 on:
   pull_request:
-    paths: ['knowledge/**']
+    paths: ['knowledge/**', 'scripts/kb/**', 'shared/protocol/**']
   push:
     branches: [main]
     paths: ['knowledge/**']
