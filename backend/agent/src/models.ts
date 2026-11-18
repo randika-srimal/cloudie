@@ -94,6 +94,7 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
   const headers = env.CF_AIG_TOKEN
     ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` }
     : undefined;
+  // Gateway paths: anthropic needs /v1 and google /v1beta (the SDK defaults carry them); openai has none.
   const gateway = (slug: string) => `${env.AI_GATEWAY_URL}/${slug}`;
   const apiKeyFor = (own: string | undefined, name: string): string => {
     if (own) return own;
@@ -104,7 +105,7 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
   switch (config.provider) {
     case 'anthropic': {
       const apiKey = apiKeyFor(env.ANTHROPIC_API_KEY, 'Anthropic');
-      const p = createAnthropic({ baseURL: gateway('anthropic'), apiKey, headers });
+      const p = createAnthropic({ baseURL: `${gateway('anthropic')}/v1`, apiKey, headers });
       return {
         model: p(config.model),
         providerOptions: config.effort ? { anthropic: { effort: config.effort } } : {},
@@ -122,7 +123,7 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
     }
     case 'google': {
       const apiKey = apiKeyFor(env.GOOGLE_API_KEY, 'Google');
-      const p = createGoogleGenerativeAI({ baseURL: gateway('google-ai-studio'), apiKey, headers });
+      const p = createGoogleGenerativeAI({ baseURL: `${gateway('google-ai-studio')}/v1beta`, apiKey, headers });
       return { model: p(config.model), providerOptions: {}, cacheSystem: false };
     }
   }

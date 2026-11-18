@@ -51,7 +51,19 @@ describe('resolveModel', () => {
     expect(() => resolveModel(DEFAULT_CONFIG, real())).toThrow(MissingKeyError);
   });
 
-  it('sends requests to the gateway path with the gateway token', async () => {
+  it.each([
+    ['anthropic', DEFAULT_CONFIG, 'http://gw.test/anthropic/v1/messages'],
+    [
+      'openai',
+      { ...DEFAULT_CONFIG, provider: 'openai', model: 'gpt-5' },
+      'http://gw.test/openai/responses',
+    ],
+    [
+      'google',
+      { ...DEFAULT_CONFIG, provider: 'google', model: 'gemini-3-pro' },
+      'http://gw.test/google-ai-studio/v1beta/models/gemini-3-pro:streamGenerateContent?alt=sse',
+    ],
+  ] as const)('sends %s requests to the gateway path with the token', async (_n, config, url) => {
     const calls: { url: string; headers: Headers }[] = [];
     const orig = globalThis.fetch;
     globalThis.fetch = ((input: Request | string | URL, init?: RequestInit) => {
@@ -59,13 +71,13 @@ describe('resolveModel', () => {
       return Promise.resolve(new Response('{}', { status: 500 }));
     }) as typeof fetch;
     try {
-      const r = resolveModel(DEFAULT_CONFIG, real({ CF_AIG_TOKEN: 'tok' }));
+      const r = resolveModel(config, real({ CF_AIG_TOKEN: 'tok' }));
       const res = streamText({ model: r.model, prompt: 'hi', maxRetries: 0, onError: () => {} });
       await res.consumeStream({ onError: () => {} });
     } finally {
       globalThis.fetch = orig;
     }
-    expect(calls[0]?.url).toBe('http://gw.test/anthropic/messages');
+    expect(calls[0]?.url).toBe(url);
     expect(calls[0]?.headers.get('cf-aig-authorization')).toBe('Bearer tok');
   });
 
