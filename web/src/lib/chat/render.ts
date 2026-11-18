@@ -37,6 +37,38 @@ function allowSet(allowlist: string[]): Set<string> {
   return set;
 }
 
+// What markdown produces, and nothing else. No <img> (a remote image URL can leak data and skips the link
+// allowlist), no forms or inputs, no style attributes (a fetched page could inject a fake login overlay).
+const ALLOWED_TAGS = [
+  'p',
+  'br',
+  'strong',
+  'em',
+  'del',
+  'code',
+  'pre',
+  'blockquote',
+  'ul',
+  'ol',
+  'li',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'a',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'hr',
+];
+// target and rel are added after sanitising, to the links that survive.
+const ALLOWED_ATTR = ['href'];
+
 /** Renders `markdown` to sanitised HTML; links not on `allowlist` become text, the rest open in a new tab. */
 export function renderReply(markdown: string, allowlist: string[]): string {
   const allowed = allowSet(allowlist);
@@ -52,7 +84,11 @@ export function renderReply(markdown: string, allowlist: string[]): string {
   });
   const html = marked.parse(markdown, { async: false });
 
-  const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+  const fragment = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    RETURN_DOM_FRAGMENT: true,
+  });
   // Raw HTML in the reply (<a href> written as HTML, not markdown) skips walkTokens, so check again here.
   for (const a of fragment.querySelectorAll('a')) {
     const href = a.getAttribute('href');

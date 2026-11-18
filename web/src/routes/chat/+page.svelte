@@ -3,6 +3,7 @@
   it connects to the SalesAgent over a WebSocket through the guarded /agents proxy after a Turnstile check.
 -->
 <script lang="ts">
+  import { PUBLIC_TURNSTILE_SITEKEY } from '$app/env/public';
   import { onDestroy, onMount, tick } from 'svelte';
   import type { UIMessage } from 'ai';
   import { createChat, type ChatHandle } from '#lib/chat/chat.svelte.ts';
@@ -11,9 +12,6 @@
   import Turnstile from '#lib/chat/Turnstile.svelte';
 
   const MAX_CHARS = 4000;
-  // Set at build time from the Terraform output. Without it (local dev) the page uses Turnstile's always-pass
-  // test sitekey, which only works with the matching test secret in backend/api/.dev.vars.
-  const SITEKEY = import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '1x00000000000000000000AA';
 
   let turnstile: Turnstile;
   let handle = $state<ChatHandle | null>(null);
@@ -182,7 +180,7 @@
       </p>
     {/if}
 
-    <Turnstile bind:this={turnstile} sitekey={SITEKEY} />
+    <Turnstile bind:this={turnstile} sitekey={PUBLIC_TURNSTILE_SITEKEY} />
 
     <form
       class="flex items-end gap-2"

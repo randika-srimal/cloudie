@@ -19,7 +19,12 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # Production builds need the Turnstile sitekey (web/src/env.ts); the check build uses Turnstile's test
+      # key and confirms the value is inlined into the chat page bundle.
       - run: pnpm build
+        env:
+          PUBLIC_TURNSTILE_SITEKEY: 1x00000000000000000000AA
+      - run: grep -rq 1x00000000000000000000AA web/build/_app
 
   # Formatting and validity of backend/infra/. Needs no Cloudflare access: plans run on your computer
   # (./cli.sh infra-plan), because they need the state bucket keys.
@@ -56,7 +61,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The real sitekey (repository variable, from the Terraform output); the build fails if it is unset.
       - run: pnpm build
+        env:
+          PUBLIC_TURNSTILE_SITEKEY: ${{ vars.PUBLIC_TURNSTILE_SITEKEY }}
       - name: Deploy Pages
         working-directory: backend/api
         run: pnpm exec wrangler pages deploy ../../web/build --project-name cloudie --branch main
