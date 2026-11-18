@@ -73,12 +73,12 @@ File-change events don't always cross the Docker bind mount. Set `CHOKIDAR_USEPO
 
 Or one at a time inside the container: `docker compose exec app pnpm test | typecheck | lint | format`.
 
-| Check      | Tool                                                                       |
-| ---------- | -------------------------------------------------------------------------- |
-| Typecheck  | `tsc` per package, `svelte-check` for the website                          |
-| Lint       | ESLint 10 (flat config, `eslint.config.js`) and Prettier                   |
-| Unit tests | Vitest 5. API tests run inside workerd through `@cloudflare/vitest-plugin` |
-| End to end | Playwright against the dev stack (`e2e/tests`)                             |
+| Check      | Tool                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| Typecheck  | `tsc` per package, `svelte-check` for the website                                                                   |
+| Lint       | ESLint 10 (flat config, `eslint.config.js`) and Prettier                                                            |
+| Unit tests | Vitest 5. API tests run inside workerd through `@cloudflare/vitest-plugin`; website tests (`web/test`) run in jsdom |
+| End to end | Playwright against the dev stack (`e2e/tests`)                                                                      |
 
 ## A shell in the container
 

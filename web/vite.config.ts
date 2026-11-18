@@ -12,6 +12,13 @@ export default defineConfig({
       // Cloudflare Pages serves from its CDN. For browser-only routes (e.g. /item/[id] with
       // `prerender = false`), add `fallback: '404.html'` here: SvelteKit then renders them client-side.
       adapter: adapter(),
+      // Scripts only from this site and Cloudflare Turnstile (the chat page's bot check). SvelteKit adds the
+      // hash of its inline start-up script, as a <meta http-equiv> tag on prerendered pages. Directives a meta
+      // tag cannot carry (frame-ancestors) are response headers in static/_headers.
+      csp: {
+        mode: 'hash',
+        directives: { 'script-src': ['self', 'https://challenges.cloudflare.com'] },
+      },
     }),
   ],
   server: {
