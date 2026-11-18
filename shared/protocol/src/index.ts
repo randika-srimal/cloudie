@@ -17,6 +17,9 @@ export type Hello = z.infer<typeof Hello>;
 export const Health = z.object({
   ok: z.literal(true),
   version: z.string(),
+  /** From the agent Worker's /status; left out when the agent is unreachable. */
+  kbVersion: z.optional(z.string()),
+  model: z.optional(z.string()),
 });
 export type Health = z.infer<typeof Health>;
 
@@ -99,6 +102,13 @@ export const KbManifest = z.object({
   allowlist: z.array(z.string()),
 });
 export type KbManifest = z.infer<typeof KbManifest>;
+
+/** GET /status on the agent Worker (through the service binding only): the config in use, no secrets. */
+export const AgentStatus = z.object({
+  kbVersion: z.string(),
+  model: z.string(),
+});
+export type AgentStatus = z.infer<typeof AgentStatus>;
 
 /** What the agent Worker reports about its loaded state. */
 export const AgentState = z.object({

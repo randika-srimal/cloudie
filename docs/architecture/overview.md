@@ -12,26 +12,61 @@ flowchart TB
   subgraph Cloudflare["Cloudflare Pages project: cloudie"]
     S[Static files<br/>web/build, from the CDN]
     F[Pages Functions<br/>/api/*, in workerd]
+    P["/agents/* proxy<br/>Origin, connect limit, Turnstile or chat_pass"]
   end
+  A[Agent Worker cloudie-agent<br/>SalesAgent Durable Objects]
+  T[Turnstile siteverify]
   B -->|"GET /"| S
   B -->|"GET /api/hello"| F
+  B -->|"WebSocket /agents/sales-agent/:id"| P
+  P -->|"siteverify (first connect)"| T
+  P -->|"AGENT service binding:<br/>allowConnect RPC, then fetch"| A
 ```
 
 A visitor's browser gets the prerendered page straight from Cloudflare's CDN, then the page calls `/api/hello`,
 which runs a Function in the data center nearest to them.
 
-| Resource        | What it is                                                                                                                                                                                              | Reached by                 | Defined in                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| Pages project   | One Cloudflare Pages project serving the static site and the Functions under one address (`cloudie.pages.dev`)                                                                                          | Everyone                   | `backend/infra/main.tf` (the project), `backend/api/wrangler.toml` (its settings) |
-| Static site     | HTML, CSS and JS that SvelteKit prerenders at build time. Cached at the edge; no server runs for it                                                                                                     | Browsers                   | `web/`                                                                            |
-| Pages Functions | TypeScript files in `backend/api/functions/`; the file path is the route (`api/hello.ts` → `/api/hello`)                                                                                                | Browsers                   | `backend/api/functions/`                                                          |
-| Middleware      | `_middleware.ts` runs before every Function: common headers, errors as JSON                                                                                                                             | Every `/api` request       | `backend/api/functions/_middleware.ts`                                            |
-| Agent Worker    | A separate Worker (`cloudie-agent`) hosting the `SalesAgent` Durable Object of the Cloudflare Agents SDK; routed under `/agents/*`. One Durable Object per chat, deleted 30 days after its last message | Browsers                   | `backend/agent/`                                                                  |
-| CONFIG KV       | A KV namespace holding the assistant's runtime config under key `config` (read by the agent Worker, cached 60 s)                                                                                        | Agent Worker               | `backend/agent/wrangler.toml`, `backend/agent/src/config.ts`                      |
-| RATE_LIMIT      | A Workers rate-limit binding on the agent Worker: 20 chat messages per minute per client IP (`cf-connecting-ip`); over the limit the agent replies with a slow-down message                             | Agent Worker               | `backend/agent/wrangler.toml`, `backend/agent/src/agent.ts`                       |
-| Custom domains  | Optional. A `cloudflare_pages_domain` plus a proxied CNAME per domain                                                                                                                                   | Everyone                   | `backend/infra/variables.tf` (`custom_domains`)                                   |
-| Terraform state | A private R2 bucket holding Terraform's record of what it manages                                                                                                                                       | `./cli.sh infra-*`         | `backend/infra/backend.tf`, created by `./cli.sh infra-bootstrap`                 |
-| API tokens      | Admin (Terraform), state (R2 key pair), deploy (Wrangler, CI)                                                                                                                                           | `./cli.sh`, GitHub Actions | `scripts/tokens.sh`                                                               |
+The chat page is embedded as an iframe in a gated HubSpot page, but its own URL is public, so the agent is only
+reachable through the guarded proxy:
+
+```mermaid
+flowchart TD
+  R[Request to /agents/*] --> P{Path starts /agents/sales-agent/?}
+  P -->|no| E404[404]
+  P -->|yes| O{Origin in ALLOWED_ORIGINS?<br/>or no Origin and Sec-Fetch-Site: same-origin}
+  O -->|no| E403[403 Forbidden]
+  O -->|yes| L{"AGENT.allowConnect(cf-connecting-ip)<br/>CONNECT_LIMIT: 10 per minute"}
+  L -->|no| E429[429 Too many connections]
+  L -->|yes| C{Valid chat_pass cookie?}
+  C -->|yes| F[Forward to AGENT.fetch]
+  C -->|no| V{"?cf_turnstile= passes siteverify?"}
+  V -->|no| E401[401 Verification required]
+  V -->|yes| FC[Forward to AGENT.fetch,<br/>add Set-Cookie chat_pass, 12 h]
+```
+
+Every request under the path goes through these checks: the WebSocket upgrade and the Agents SDK's HTTP GET and
+POST calls alike. The `cf_turnstile` token is removed from the URL and the `Cookie` header is dropped before the
+request reaches the agent; the rest of the request, including `cf-connecting-ip` (which Cloudflare sets itself,
+so clients cannot choose it), is forwarded unchanged so the agent's per-IP message limit works.
+
+| Resource        | What it is                                                                                                                                                                                                                                                                                                                                                                    | Reached by                 | Defined in                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------- |
+| Pages project   | One Cloudflare Pages project serving the static site and the Functions under one address (`cloudie.pages.dev`)                                                                                                                                                                                                                                                                | Everyone                   | `backend/infra/main.tf` (the project), `backend/api/wrangler.toml` (its settings)  |
+| Static site     | HTML, CSS and JS that SvelteKit prerenders at build time. Cached at the edge; no server runs for it                                                                                                                                                                                                                                                                           | Browsers                   | `web/`                                                                             |
+| Pages Functions | TypeScript files in `backend/api/functions/`; the file path is the route (`api/hello.ts` → `/api/hello`)                                                                                                                                                                                                                                                                      | Browsers                   | `backend/api/functions/`                                                           |
+| Middleware      | `_middleware.ts` runs before every Function: common headers, errors as JSON. WebSocket upgrades (101) pass through untouched                                                                                                                                                                                                                                                  | Every Function request     | `backend/api/functions/_middleware.ts`                                             |
+| Chat proxy      | Pages Function on `/agents/*`: checks path, Origin, connect limit and Turnstile or `chat_pass`, then forwards to the agent Worker (see the flow above)                                                                                                                                                                                                                        | Browsers (the chat page)   | `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts` |
+| AGENT binding   | Service binding from the Pages project to `cloudie-agent`: `fetch` for chat traffic and `GET /status` (KB version and model, shown by `/api/health`), RPC `allowConnect(ip)` for the connect limit                                                                                                                                                                            | Pages Functions            | `backend/api/wrangler.toml` (`[[services]]`), `backend/api/functions/_lib/env.ts`  |
+| ALLOWED_ORIGINS | Pages `[vars]` value: comma-separated origins allowed to open the chat. `http://localhost:5173` locally; production and preview values come from Terraform/wrangler per environment                                                                                                                                                                                           | Chat proxy                 | `backend/api/wrangler.toml`                                                        |
+| Turnstile       | Cloudflare's bot check. The chat page sends the widget token as `?cf_turnstile=`; the proxy verifies it with siteverify (`https://challenges.cloudflare.com/turnstile/v0/siteverify`)                                                                                                                                                                                         | Chat proxy                 | `backend/api/functions/_lib/guards.ts`                                             |
+| Secrets         | `TURNSTILE_SECRET` (Turnstile secret key) and `PASS_SECRET` (HMAC key for `chat_pass`) on the Pages project. Locally from `backend/api/.dev.vars` (Turnstile's always-pass test secret)                                                                                                                                                                                       | Chat proxy                 | `./cli.sh set-secret`, `backend/api/.dev.vars.example`                             |
+| Agent Worker    | A separate Worker (`cloudie-agent`) hosting the `SalesAgent` Durable Object of the Cloudflare Agents SDK; routed under `/agents/*`. One Durable Object per chat, deleted 30 days after its last message. `workers_dev` and `preview_urls` are off, so it has no public address and is reached only through the AGENT binding (otherwise the proxy's guards could be bypassed) | AGENT binding only         | `backend/agent/`                                                                   |
+| CONNECT_LIMIT   | A Workers rate-limit binding on the agent Worker: 10 chat connections per minute per client IP, called by the proxy over RPC (`allowConnect`). It lives on the agent because Pages projects cannot have rate-limit bindings                                                                                                                                                   | Chat proxy (RPC)           | `backend/agent/wrangler.toml`, `backend/agent/src/index.ts`                        |
+| CONFIG KV       | A KV namespace holding the assistant's runtime config under key `config` (read by the agent Worker, cached 60 s)                                                                                                                                                                                                                                                              | Agent Worker               | `backend/agent/wrangler.toml`, `backend/agent/src/config.ts`                       |
+| RATE_LIMIT      | A Workers rate-limit binding on the agent Worker: 20 chat messages per minute per client IP (`cf-connecting-ip`); over the limit the agent replies with a slow-down message                                                                                                                                                                                                   | Agent Worker               | `backend/agent/wrangler.toml`, `backend/agent/src/agent.ts`                        |
+| Custom domains  | Optional. A `cloudflare_pages_domain` plus a proxied CNAME per domain                                                                                                                                                                                                                                                                                                         | Everyone                   | `backend/infra/variables.tf` (`custom_domains`)                                    |
+| Terraform state | A private R2 bucket holding Terraform's record of what it manages                                                                                                                                                                                                                                                                                                             | `./cli.sh infra-*`         | `backend/infra/backend.tf`, created by `./cli.sh infra-bootstrap`                  |
+| API tokens      | Admin (Terraform), state (R2 key pair), deploy (Wrangler, CI)                                                                                                                                                                                                                                                                                                                 | `./cli.sh`, GitHub Actions | `scripts/tokens.sh`                                                                |
 
 ## Glossary
 
@@ -44,6 +79,11 @@ which runs a Function in the data center nearest to them.
 | Wrangler         | Cloudflare's CLI: local dev server, deploys, secrets, database migrations                                        |
 | Prerender        | Rendering a page to HTML at build time instead of per request                                                    |
 | Terraform state  | Terraform's record of the real resources it created, so it can tell what changed                                 |
+| Service binding  | A binding that lets one Worker (here the Pages Functions) call another Worker directly, without a public URL     |
+| RPC              | Calling a method of another Worker's `WorkerEntrypoint` class through a service binding, like a local function   |
+| Turnstile        | Cloudflare's CAPTCHA replacement; the page gets a token, the server checks it once with siteverify               |
+| chat_pass        | Cookie set by the proxy after a passed Turnstile check: `<expiry>.<HMAC-SHA256(PASS_SECRET, expiry)>`, 12 hours  |
+| Origin           | Browser-set request header naming the page that made the request; the proxy only accepts its own pages           |
 
 ## Who does what
 

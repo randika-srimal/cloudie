@@ -1,2 +1,10 @@
 # Local-only secrets for `wrangler pages dev`. Copied to .dev.vars (ignored by Git) on first `pnpm dev`.
-# EXAMPLE_SECRET=change-me
+# Production values: ./cli.sh set-secret.
+
+# Cloudflare's Turnstile test secret that always passes (pairs with the test sitekey 1x00000000000000000000AA).
+# The chat page sends the widget token as ?cf_turnstile=; the /agents proxy checks it with siteverify.
+TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+
+# HMAC key that signs the 12-hour chat_pass cookie. Any long random string; production uses its own
+# (e.g. openssl rand -base64 32). Changing it signs everyone out of the chat.
+PASS_SECRET=dev-only-pass-secret-change-me

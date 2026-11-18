@@ -23,9 +23,11 @@ export default defineConfig({
       usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
       ignored: ['**/.wrangler/**'],
     },
-    // /api is served by the Pages Functions in `wrangler pages dev` (backend/api)
+    // /api and /agents (the guarded chat WebSocket proxy) are served by the Pages Functions in
+    // `wrangler pages dev` (backend/api). The browser's Origin (http://localhost:5173) is passed on unchanged.
     proxy: {
       '/api': { target: 'http://localhost:8788', ws: true },
+      '/agents': { target: 'http://localhost:8788', ws: true },
     },
   },
 });

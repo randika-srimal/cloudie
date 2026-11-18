@@ -6,6 +6,8 @@ export interface Env {
   KB: R2Bucket;
   SalesAgent: DurableObjectNamespace;
   RATE_LIMIT: RateLimit;
+  /** 10 chat connections per minute per client IP; checked by the Pages proxy over RPC (allowConnect). */
+  CONNECT_LIMIT: RateLimit;
   /** Base URL of the AI Gateway: https://gateway.ai.cloudflare.com/v1/<account>/<gateway>. */
   AI_GATEWAY_URL: string;
   CF_AIG_TOKEN?: string;

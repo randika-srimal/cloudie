@@ -12,8 +12,11 @@ export default defineConfig({
         kvNamespaces: ['CONFIG'],
         r2Buckets: ['KB'],
         durableObjects: { SalesAgent: { className: 'SalesAgent', useSQLite: true } },
-        // Same limit as wrangler.toml: 20 chat messages per minute per client IP.
-        ratelimits: { RATE_LIMIT: { namespace_id: '1001', simple: { limit: 20, period: 60 } } },
+        // Same limits as wrangler.toml: 20 chat messages and 10 connections per minute per client IP.
+        ratelimits: {
+          RATE_LIMIT: { namespace_id: '1001', simple: { limit: 20, period: 60 } },
+          CONNECT_LIMIT: { namespace_id: '1002', simple: { limit: 10, period: 60 } },
+        },
         bindings: { MOCK_MODEL: 'echo', AI_GATEWAY_URL: 'http://gw.test' },
       },
     }),

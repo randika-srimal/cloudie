@@ -7,6 +7,18 @@ compatibility_date = "2026-11-01"
 # Plain (non-secret) settings, readable as env.<NAME>. Secrets: ./cli.sh set-secret (never in this file).
 [vars]
 APP_VERSION = "0.1.0"
+# Origins allowed to open the chat (comma-separated): the address the chat page is served from. This is the
+# local dev value; the production and preview values (the pages.dev and custom-domain addresses) come later
+# from Terraform/wrangler per environment.
+ALLOWED_ORIGINS = "http://localhost:5173"
+
+# The agent Worker (backend/agent). The /agents/* proxy forwards to it and calls its allowConnect RPC.
+# Locally, `wrangler pages dev` reaches the `wrangler dev` of backend/agent through the dev registry (both run
+# under `pnpm dev`). There is no [[ratelimits]] here: Pages projects do not support rate-limit bindings, so the
+# connect limit (CONNECT_LIMIT) lives on the agent Worker.
+[[services]]
+binding = "AGENT"
+service = "cloudie-agent"
 
 # Add bindings here when the project needs them, then create the resource in backend/infra/main.tf:
 #

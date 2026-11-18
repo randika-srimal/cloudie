@@ -21,12 +21,18 @@ The first start downloads packages into a Docker volume (a minute); later starts
 ```mermaid
 flowchart LR
   B[Browser] -->|:5173| V[Vite dev server<br/>SvelteKit, hot reload]
-  V -->|/api/*| W[wrangler pages dev :8788<br/>Pages Functions in workerd]
+  V -->|/api/*, /agents/*| W[wrangler pages dev :8788<br/>Pages Functions in workerd]
+  W -->|AGENT service binding,<br/>dev registry| A[wrangler dev :8787<br/>agent Worker]
   W -.->|local D1, R2, KV| S[(.wrangler/state<br/>Docker volume)]
+  A -.-> S
 ```
 
-The browser talks to Vite; Vite hands every `/api` request to Wrangler, which runs the Functions in workerd,
-the same runtime as production.
+The browser talks to Vite; Vite hands every `/api` and `/agents` request to Wrangler, which runs the Functions in
+workerd, the same runtime as production. `pnpm dev` also starts the agent Worker (`wrangler dev` in
+`backend/agent`); `wrangler pages dev` finds it by name (`cloudie-agent`) through Wrangler's local dev registry.
+The chat proxy accepts the Origin `http://localhost:5173` (`ALLOWED_ORIGINS` in `backend/api/wrangler.toml`); if
+you change `WEB_PORT`, add your address there. Locally, Turnstile uses Cloudflare's always-pass test keys
+(`backend/api/.dev.vars`).
 
 ## The containers
 

@@ -3,6 +3,10 @@ name = "cloudie-agent"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
 compatibility_flags = ["nodejs_compat"]
+# Only the Pages project reaches this Worker, through its AGENT service binding. A workers.dev or preview
+# address would let anyone open /agents/* directly and skip the proxy's Origin, connect-limit and Turnstile guards.
+workers_dev = false
+preview_urls = false
 
 # Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-secret, never in this file.
 [vars]
@@ -32,6 +36,14 @@ name = "RATE_LIMIT"
 namespace_id = "1001"
   [ratelimits.simple]
   limit = 20
+  period = 60
+
+# Checked by the Pages proxy over RPC (allowConnect): Pages Functions cannot have a rate-limit binding.
+[[ratelimits]]
+name = "CONNECT_LIMIT"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 10
   period = 60
 
 [observability]
