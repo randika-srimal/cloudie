@@ -123,7 +123,11 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
     }
     case 'google': {
       const apiKey = apiKeyFor(env.GOOGLE_API_KEY, 'Google');
-      const p = createGoogleGenerativeAI({ baseURL: `${gateway('google-ai-studio')}/v1beta`, apiKey, headers });
+      const p = createGoogleGenerativeAI({
+        baseURL: `${gateway('google-ai-studio')}/v1beta`,
+        apiKey,
+        headers,
+      });
       return { model: p(config.model), providerOptions: {}, cacheSystem: false };
     }
   }
