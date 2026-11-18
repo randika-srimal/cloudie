@@ -9,7 +9,7 @@ import { z } from 'zod/mini';
 
 const MAX_REDIRECTS = 3;
 const MAX_CHARS = 80_000;
-const MAX_RAW_CHARS = 2_000_000;
+const MAX_RAW_CHARS = 500_000;
 const TIMEOUT_MS = 8000;
 
 const inputSchema = z.object({ url: z.string() });
@@ -78,17 +78,80 @@ function collapse(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function extractTitle(html: string): string {
-  const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  return m ? collapse(decodeEntities(m[1]!)) : '';
+// ASCII-only lowercase keeps string length, so indexes found in the copy are valid in the original.
+function asciiLower(s: string): string {
+  return s.replace(/[A-Z]+/g, (m) => m.toLowerCase());
 }
 
+function extractTitle(html: string): string {
+  const lower = asciiLower(html);
+  const open = lower.indexOf('<title');
+  if (open === -1) return '';
+  const gt = lower.indexOf('>', open);
+  if (gt === -1) return '';
+  const close = lower.indexOf('</title', gt);
+  if (close === -1) return '';
+  return collapse(decodeEntities(html.slice(gt + 1, close)));
+}
+
+const SKIPPED = new Set(['script', 'style', 'nav', 'head']);
+
+// Single forward pass: every step moves the cursor past what it consumed, so cost is linear in the input
+// (regex versions were quadratic on unmatched "<").
 function htmlToText(html: string): string {
-  const stripped = html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style|nav|head)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ');
-  return collapse(decodeEntities(stripped));
+  const lower = asciiLower(html);
+  const out: string[] = [];
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) {
+      out.push(html.slice(i));
+      break;
+    }
+    out.push(html.slice(i, lt), ' ');
+    if (lower.startsWith('<!--', lt)) {
+      const end = lower.indexOf('-->', lt + 4);
+      if (end === -1) break;
+      i = end + 3;
+      continue;
+    }
+    const gt = html.indexOf('>', lt + 1);
+    if (gt === -1) {
+      out.push(html.slice(lt)); // no tag can close: the rest is plain text
+      break;
+    }
+    const m = /^<([a-z]+)(?![a-z0-9])/.exec(lower.slice(lt, lt + 12));
+    const name = m?.[1];
+    if (name && SKIPPED.has(name)) {
+      const close = lower.indexOf(`</${name}`, gt);
+      if (close === -1) break; // unclosed: drop the rest
+      const closeGt = html.indexOf('>', close);
+      if (closeGt === -1) break;
+      i = closeGt + 1;
+      continue;
+    }
+    i = gt + 1;
+  }
+  return collapse(decodeEntities(out.join('')));
+}
+
+// Reads at most maxChars of the body and cancels the stream, so a huge page cannot exhaust Worker memory.
+async function readCapped(res: Response, maxChars: number): Promise<string> {
+  if (!res.body) return '';
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      if (text.length >= maxChars) break;
+    }
+  } finally {
+    void reader.cancel().catch(() => undefined);
+  }
+  return text.slice(0, maxChars);
 }
 
 async function load(doFetch: typeof fetch, startUrl: string): Promise<FetchPageResult> {
@@ -116,7 +179,7 @@ async function load(doFetch: typeof fetch, startUrl: string): Promise<FetchPageR
       void res.body?.cancel();
       return { error: `unsupported content type: ${type || 'unknown'}` };
     }
-    const raw = (await res.text()).slice(0, MAX_RAW_CHARS);
+    const raw = await readCapped(res, MAX_RAW_CHARS);
     const isHtml = type === 'text/html';
     return {
       url: current.href,

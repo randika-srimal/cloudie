@@ -138,4 +138,35 @@ describe('fetchPageTool', () => {
       error: expect.stringContaining('500'),
     });
   });
+
+  it('cuts an endless streamed body without an error or reading it all', async () => {
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        pulled++;
+        c.enqueue(new TextEncoder().encode('a'.repeat(100_000)));
+        if (pulled > 1000) c.close();
+      },
+    });
+    const { f } = fakeFetch(
+      () => new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }),
+    );
+    const r = (await run(fetchPageTool({ fetch: f }), 'https://acme.test/')) as { text: string };
+    expect(r.text).toHaveLength(80_000);
+    expect(pulled).toBeLessThan(20);
+  });
+
+  it.each([
+    ['a run of <', '<'.repeat(200_000)],
+    ['unclosed <nav', '<nav'.repeat(50_000)],
+    ['unclosed <title', '<title'.repeat(50_000)],
+    ['< with a late >', `${'<'.repeat(200_000)}>`],
+  ])('handles hostile markup in linear time: %s', async (_n, markup) => {
+    const { f } = fakeFetch(() => html(`<title>T</title><p>before</p>${markup}`));
+    const start = performance.now();
+    const r = await run(fetchPageTool({ fetch: f }), 'https://acme.test/');
+    expect(performance.now() - start).toBeLessThan(200);
+    expect(r).toMatchObject({ url: 'https://acme.test/', title: 'T' });
+    expect((r as { text: string }).text).toContain('before');
+  });
 });
