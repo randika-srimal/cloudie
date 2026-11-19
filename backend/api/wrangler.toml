@@ -11,13 +11,19 @@ APP_VERSION = "0.1.0"
 # This top-level value is for local dev (`wrangler pages dev`); production uses [env.production.vars] below.
 ALLOWED_ORIGINS = "http://localhost:5173"
 
-# Production only (Pages deploys on the production branch). `vars` are not inherited from the top level, so
-# APP_VERSION repeats. ALLOWED_ORIGINS is written by `./cli.sh infra-write-config` from the Terraform output
-# chat_origins (the pages.dev address and the custom domains); the placeholder is never deployed unsynced.
-# Preview deployments keep the local value, so the chat does not run on preview addresses.
+# Production only (Pages deploys on the production branch). Once an [env.production] section exists, Wrangler
+# does NOT inherit `vars` or bindings from the top level for it (they are "non-inheritable"), so APP_VERSION and
+# the AGENT service binding are repeated below; keep them in step with the top level. ALLOWED_ORIGINS is written
+# by `./cli.sh infra-write-config` from the Terraform output chat_origins (pages.dev and custom domains);
+# scripts/check-synced.sh blocks deploys while the placeholder is still here. Preview deployments (no
+# [env.preview] section) use the top-level values, so the chat does not run on preview addresses.
 [env.production.vars]
 APP_VERSION = "0.1.0"
-ALLOWED_ORIGINS = "https://cloudie.pages.dev" # tf-sync
+ALLOWED_ORIGINS = "https://unsynced.invalid" # tf-sync
+
+[[env.production.services]]
+binding = "AGENT"
+service = "cloudie-agent"
 
 # The agent Worker (backend/agent). The /agents/* proxy forwards to it and calls its allowConnect RPC.
 # Locally, `wrangler pages dev` reaches the `wrangler dev` of backend/agent through the dev registry (both run

@@ -65,6 +65,9 @@ jobs:
       - run: pnpm build
         env:
           PUBLIC_TURNSTILE_SITEKEY: ${{ vars.PUBLIC_TURNSTILE_SITEKEY }}
+      # Fails while a wrangler.toml still has a Terraform placeholder (run ./cli.sh deploy locally, commit the result).
+      - name: Check the wrangler.toml files are synced
+        run: bash scripts/check-synced.sh
       # The agent Worker goes first: Pages' AGENT service binding needs it to exist.
       - name: Deploy agent Worker
         working-directory: backend/agent

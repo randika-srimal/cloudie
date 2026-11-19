@@ -220,17 +220,31 @@ set_toml_value() {
 }
 
 # Writes the agent's KV id and AI Gateway URL, and the production chat origins, into the wrangler.toml files.
+# Everything is checked first (outputs non-empty, every tagged line present), so a failure writes nothing.
 act_infra_write_config() {
   ensure_tf || return 1
   local kv gateway origins
   kv="$(tf_out kv_config_id)" && gateway="$(tf_out ai_gateway_url)" && origins="$(tf_out chat_origins)" ||
     { fail "Could not read the Terraform outputs (has './cli.sh infra-apply' run?)"; return 1; }
+  [[ "$kv" =~ ^[0-9a-f]{32}$ ]] || { fail "kv_config_id is not a 32-character id: '$kv'"; return 1; }
+  [[ "$gateway" =~ ^https://gateway\.ai\.cloudflare\.com/v1/[0-9a-f]{32}/[a-z0-9-]+$ ]] ||
+    { fail "ai_gateway_url looks wrong: '$gateway'"; return 1; }
+  [[ "$origins" =~ ^https://[^,[:space:]]+(,https://[^,[:space:]]+)*$ ]] ||
+    { fail "chat_origins looks wrong: '$origins'"; return 1; }
+  local f k
+  for f_k in "backend/agent/wrangler.toml:id" "backend/agent/wrangler.toml:AI_GATEWAY_URL" "$WEB_TOML:ALLOWED_ORIGINS"; do
+    f="${f_k%%:*}" k="${f_k##*:}"
+    grep -Eq "^[[:space:]]*$k = \".*\" # tf-sync" "$f" || { fail "$f has no '$k = ... # tf-sync' line; nothing written"; return 1; }
+  done
   set_toml_value backend/agent/wrangler.toml id "$kv" || return 1
   set_toml_value backend/agent/wrangler.toml AI_GATEWAY_URL "$gateway" || return 1
   set_toml_value "$WEB_TOML" ALLOWED_ORIGINS "$origins" || return 1
   ok "Wrote the KV id, AI Gateway URL and production chat origins ($origins) into the wrangler.toml files."
   git diff --quiet -- backend/agent/wrangler.toml "$WEB_TOML" || note "They changed: commit backend/agent/wrangler.toml and $WEB_TOML."
 }
+
+# Fails while a wrangler.toml still has a placeholder (see scripts/check-synced.sh).
+check_synced() { bash "$ROOT/scripts/check-synced.sh" || { fail "Placeholders left: nothing deployed"; return 1; }; }
 
 # The first step of every deploy: bring Cloudflare in line with backend/infra/ before the code that may
 # depend on it goes out. Plans once, and applies exactly that plan if you agree.
@@ -256,7 +270,7 @@ act_infra_sync() {
       ;;
   esac
   rm -f "$ROOT/backend/infra/$plan"
-  act_infra_write_config || note "Check the IDs in backend/agent/wrangler.toml before deploying."
+  act_infra_write_config || return 1
 }
 
 # ── Deploy ────────────────────────────────────────────────────────────────
@@ -274,11 +288,13 @@ export_sitekey() {
 # The agent Worker must exist before Pages: Pages' AGENT service binding points at it.
 act_deploy_agent() {
   ensure_cloudflare
+  check_synced || return 1
   run agent_wrangler deploy
 }
 
 act_deploy_pages() {
   ensure_cloudflare
+  check_synced || return 1
   export_sitekey || return 1
   run pnpm build || return 1
   run wrangler pages deploy ../../web/build --project-name "$(pages_project)" --branch main
