@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 preview_urls = false
 
-# Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-secret, never in this file.
+# Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-agent-secret, never in this file.
 [vars]
 # Written by `./cli.sh infra-write-config` (part of `./cli.sh deploy`) from the Terraform output ai_gateway_url.
 AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/cloudie-assistant" # tf-sync

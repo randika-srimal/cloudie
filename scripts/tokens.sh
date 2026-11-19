@@ -40,7 +40,6 @@ DEPLOY_PERMISSIONS=(
   "Workers Scripts Write"
   "Workers KV Storage Write"
   "Workers R2 Storage Write"
-  "AI Gateway Write"
 )
 
 die() { echo "tokens: $*" >&2; exit 1; }

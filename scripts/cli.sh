@@ -118,6 +118,16 @@ act_whoami() {
   run wrangler whoami
 }
 
+# put_pages_secret NAME VALUE / put_agent_secret NAME VALUE: store a secret without echoing it.
+put_pages_secret() {
+  gum style --foreground "$DIM" "\$ wrangler pages secret put $1 (value hidden)"
+  printf '%s' "$2" | wrangler pages secret put "$1" --project-name "$(pages_project)"
+}
+put_agent_secret() {
+  gum style --foreground "$DIM" "\$ wrangler secret put $1 (value hidden; cloudie-agent)"
+  printf '%s' "$2" | agent_wrangler secret put "$1"
+}
+
 # ./cli.sh set-secret [NAME]  (e.g. TURNSTILE_SECRET, PASS_SECRET)
 act_set_secret() {
   ensure_cloudflare
@@ -128,8 +138,7 @@ act_set_secret() {
   [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || { fail "Use UPPER_SNAKE_CASE"; return 1; }
   value="$(gum input --password --placeholder "Value" --width 60)"
   [[ -n "$value" ]] || { fail "Nothing entered; $name not changed"; return 1; }
-  gum style --foreground "$DIM" "\$ wrangler pages secret put $name (value hidden)"
-  if printf '%s' "$value" | wrangler pages secret put "$name" --project-name "$(pages_project)"; then
+  if put_pages_secret "$name" "$value"; then
     ok "Set. Deploy Pages again for it to take effect."
   else fail "Failed"; return 1; fi
 }
@@ -144,8 +153,7 @@ act_set_agent_secret() {
   [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || { fail "Use UPPER_SNAKE_CASE"; return 1; }
   value="$(gum input --password --placeholder "Value" --width 60)"
   [[ -n "$value" ]] || { fail "Nothing entered; $name not changed"; return 1; }
-  gum style --foreground "$DIM" "\$ wrangler secret put $name (value hidden; cloudie-agent)"
-  if printf '%s' "$value" | agent_wrangler secret put "$name"; then
+  if put_agent_secret "$name" "$value"; then
     ok "Set. It takes effect on the Worker's next request; no redeploy needed."
   else fail "Failed"; return 1; fi
 }
@@ -155,20 +163,48 @@ act_list_secrets() {
   run wrangler pages secret list --project-name "$(pages_project)"
 }
 
+# The assistant's secrets, set once by the first-time wizard: the Turnstile secret straight from Terraform,
+# a freshly generated PASS_SECRET, and the AI Gateway token pasted from the dashboard. Pages secrets need the
+# Pages project (infra-apply); the agent secret needs the Worker (deploy-agent).
+first_setup_secrets() {
+  ensure_cloudflare
+  local turnstile pass aig
+  turnstile="$(tf_out turnstile_secret)" && [[ -n "$turnstile" ]] ||
+    { fail "Could not read the turnstile_secret output (has infra-apply run?)"; return 1; }
+  put_pages_secret TURNSTILE_SECRET "$turnstile" || { fail "Could not set TURNSTILE_SECRET"; return 1; }
+  ok "TURNSTILE_SECRET set from Terraform"
+  pass="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64"))')"
+  put_pages_secret PASS_SECRET "$pass" || { fail "Could not set PASS_SECRET"; return 1; }
+  ok "PASS_SECRET set (generated, 32 random bytes)"
+  note "CF_AIG_TOKEN: an AI Gateway token (AI → AI Gateway → cloudie-assistant → Settings → Authentication)."
+  aig="$(gum input --password --placeholder "AI Gateway token (CF_AIG_TOKEN)" --width 60)"
+  [[ -n "$aig" ]] || { fail "Nothing entered; set it later with ./cli.sh set-agent-secret CF_AIG_TOKEN"; return 1; }
+  put_agent_secret CF_AIG_TOKEN "$aig" || { fail "Could not set CF_AIG_TOKEN"; return 1; }
+  ok "CF_AIG_TOKEN set on cloudie-agent"
+}
+
 act_first_setup() {
   gum style --border rounded --padding "0 2" --border-foreground "$GREEN" \
     "First-time setup on Cloudflare" "" \
     "1. Create the API tokens (admin, state key, deploy)" \
     "2. Create the Terraform state bucket" \
-    "3. Terraform: the Pages project (and custom domains, if set)" \
-    "4. Build and deploy Pages" \
-    "5. Health check"
+    "3. Terraform: Pages project, KV, R2, AI Gateway, Turnstile (and custom domains, if set)" \
+    "4. Write the Terraform IDs into the wrangler.toml files" \
+    "5. Deploy the agent Worker" \
+    "6. Set the secrets: TURNSTILE_SECRET, PASS_SECRET, CF_AIG_TOKEN" \
+    "7. Build and deploy Pages" \
+    "8. Publish the knowledge base" \
+    "9. Health check"
   confirm "Start? Each step can be skipped." || return 0
   step() { title "$1"; if confirm "$1?"; then "$2" || confirm "That failed. Continue anyway?" || return 1; fi; }
   step "Create the API tokens" act_tokens
   step "Create the Terraform state bucket" act_infra_bootstrap
   step "Create the infrastructure with Terraform" act_infra_apply
+  step "Write the Terraform IDs into the wrangler.toml files" act_infra_write_config
+  step "Deploy the agent Worker" act_deploy_agent
+  step "Set the assistant secrets" first_setup_secrets
   step "Build and deploy Pages" act_deploy_pages
+  step "Publish the knowledge base" act_kb_publish
   step "Health check" act_health
 }
 

@@ -52,7 +52,8 @@ Lines tagged `# tf-sync` in the two `wrangler.toml` files are rewritten from the
 `./cli.sh infra-write-config`, which `./cli.sh deploy` runs after its Terraform step. Commit the result; none of it
 is secret.
 
-Secrets never go through Terraform files or the state-reading commands' output on screen:
+`./cli.sh first-setup` sets all three once. Secrets never go through Terraform files or the state-reading
+commands' output on screen; to set or rotate one by hand:
 
 ```bash
 # Turnstile secret (Pages project). The value is read from the Terraform output, never written to a file:

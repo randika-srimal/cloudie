@@ -8,20 +8,24 @@
 
 The wizard runs these steps, each one skippable:
 
-| Step                      | Action            | Creates                                                                             |
-| ------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
-| 1. API tokens             | `tokens`          | Three tokens, saved to `.env.cloudflare` ([Credentials](#credentials))              |
-| 2. Terraform state bucket | `infra-bootstrap` | Private R2 bucket `cloudie-tfstate`                                                 |
-| 3. Infrastructure         | `infra-apply`     | Pages project `cloudie` (and custom domains, if set), KV, R2, AI Gateway, Turnstile |
-| 4. Build and deploy       | `deploy-pages`    | The first production deployment at `https://cloudie.pages.dev`                      |
-| 5. Health check           | `health`          | Nothing; checks `GET /api/health` answers                                           |
+| Step                      | Action               | Creates                                                                                                   |
+| ------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1. API tokens             | `tokens`             | Three tokens, saved to `.env.cloudflare` ([Credentials](#credentials))                                    |
+| 2. Terraform state bucket | `infra-bootstrap`    | Private R2 bucket `cloudie-tfstate`                                                                       |
+| 3. Infrastructure         | `infra-apply`        | Pages project `cloudie` (and custom domains, if set), KV, R2, AI Gateway, Turnstile                       |
+| 4. IDs into code          | `infra-write-config` | The KV id, AI Gateway URL and production `ALLOWED_ORIGINS` in the two `wrangler.toml` files (commit them) |
+| 5. Agent Worker           | `deploy-agent`       | The Worker `cloudie-agent` (Pages' `AGENT` binding and the agent secret need it to exist)                 |
+| 6. Secrets                | (wizard only)        | `TURNSTILE_SECRET` (read from Terraform), `PASS_SECRET` (generated), `CF_AIG_TOKEN` (you paste it)        |
+| 7. Build and deploy       | `deploy-pages`       | The first production deployment at `https://cloudie.pages.dev`                                            |
+| 8. Knowledge base         | `kb-publish`         | The first `kbVersion`; until then the chat answers only with its fallback message                         |
+| 9. Health check           | `health`             | Nothing; checks `GET /api/health` answers                                                                 |
 
-Prefer not to use Terraform? Skip steps 1–3, run `./cli.sh deploy-pages` with any token that has
-**Pages Write**: Wrangler creates the project on the first deploy.
+The assistant needs every step: Terraform creates its KV, R2, AI Gateway and Turnstile widget, so there is no
+path without it.
 
-## Assistant secrets and variables (once)
+## Assistant secrets and variables
 
-After the first `infra-apply`, and before the first deploy (full commands in
+The wizard sets these once. To set or rotate one by hand (full commands in
 [Infrastructure → Assistant resources](../../backend/infra/README.md#assistant-resources)):
 
 | What                                             | Where                                      | How                                                           |
@@ -33,9 +37,9 @@ After the first `infra-apply`, and before the first deploy (full commands in
 
 `./cli.sh deploy` reads the sitekey from Terraform itself. Production `ALLOWED_ORIGINS` (the chat page's own
 addresses, never HubSpot's) is written into `backend/api/wrangler.toml` from the `chat_origins` output; commit it.
-Secrets set on the agent Worker need the Worker to exist, so run `./cli.sh deploy-agent` once first. Then publish
-the knowledge base (`./cli.sh kb-publish`): until a `kbVersion` is set the chat answers only with its fallback
-message. Day-to-day operation (model, keys, HubSpot embed, costs) is in [The sales assistant](../guide/assistant.md).
+Secrets set on the agent Worker need the Worker to exist (`./cli.sh deploy-agent`), and a Pages secret takes
+effect on the next Pages deploy. Day-to-day operation (model, keys, HubSpot embed, costs) is in
+[The sales assistant](../guide/assistant.md).
 
 ## Every deploy
 
@@ -80,11 +84,11 @@ the `wrangler.toml` files, so run `./cli.sh deploy` locally (and commit) after i
 
 `./cli.sh tokens` makes three API tokens from one temporary token, so nobody clicks through permission lists:
 
-| Token                     | Can                                                                                                                                         | Used by                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `cloudie-terraform-admin` | Everything on the account except managing tokens                                                                                            | Terraform                |
-| `cloudie-terraform-state` | Read and write the state bucket only (as an S3 key pair)                                                                                    | Terraform's backend      |
-| `cloudie-deploy`          | `Account Settings Read`, `Pages Write`, `Workers Scripts Write`, `Workers KV Storage Write`, `Workers R2 Storage Write`, `AI Gateway Write` | Wrangler, GitHub Actions |
+| Token                     | Can                                                                                                                     | Used by                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `cloudie-terraform-admin` | Everything on the account except managing tokens                                                                        | Terraform                |
+| `cloudie-terraform-state` | Read and write the state bucket only (as an S3 key pair)                                                                | Terraform's backend      |
+| `cloudie-deploy`          | `Account Settings Read`, `Pages Write`, `Workers Scripts Write`, `Workers KV Storage Write`, `Workers R2 Storage Write` | Wrangler, GitHub Actions |
 
 1. In the dashboard: **My Profile → API Tokens → Create Token**, template **Create Additional Tokens**,
    create it and copy it.
