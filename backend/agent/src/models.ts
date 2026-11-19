@@ -84,6 +84,9 @@ function buildMock(kind: string): MockLanguageModelV4 {
 /**
  * Turns the runtime config into an AI SDK model routed through the AI Gateway. With a gateway token
  * the gateway may hold the provider key (BYOK); otherwise the provider's own secret is required.
+ * An empty AI_GATEWAY_URL (local dev, set in .dev.vars) skips the gateway: the SDK calls the
+ * provider directly with its own key. Production never has it empty: .dev.vars is never deployed,
+ * and scripts/check-synced.sh refuses to deploy unless wrangler.toml holds a full gateway URL.
  */
 export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
   if (env.MOCK_MODEL) {
@@ -91,21 +94,25 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
     return { model: lastMock, providerOptions: {}, cacheSystem: false };
   }
 
-  const headers = env.CF_AIG_TOKEN
-    ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` }
-    : undefined;
+  const viaGateway = env.AI_GATEWAY_URL !== '';
+  const headers =
+    viaGateway && env.CF_AIG_TOKEN
+      ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` }
+      : undefined;
   // Gateway paths: anthropic needs /v1 and google /v1beta (the SDK defaults carry them); openai has none.
-  const gateway = (slug: string) => `${env.AI_GATEWAY_URL}/${slug}`;
+  // Without the gateway, undefined keeps each SDK's own default base URL.
+  const gateway = (slug: string, version = '') =>
+    viaGateway ? `${env.AI_GATEWAY_URL}/${slug}${version}` : undefined;
   const apiKeyFor = (own: string | undefined, name: string): string => {
     if (own) return own;
-    if (!env.CF_AIG_TOKEN) throw new MissingKeyError(name);
+    if (!viaGateway || !env.CF_AIG_TOKEN) throw new MissingKeyError(name);
     return 'gateway-byok'; // placeholder: the gateway injects the stored key
   };
 
   switch (config.provider) {
     case 'anthropic': {
       const apiKey = apiKeyFor(env.ANTHROPIC_API_KEY, 'Anthropic');
-      const p = createAnthropic({ baseURL: `${gateway('anthropic')}/v1`, apiKey, headers });
+      const p = createAnthropic({ baseURL: gateway('anthropic', '/v1'), apiKey, headers });
       return {
         model: p(config.model),
         providerOptions: config.effort ? { anthropic: { effort: config.effort } } : {},
@@ -124,7 +131,7 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
     case 'google': {
       const apiKey = apiKeyFor(env.GOOGLE_API_KEY, 'Google');
       const p = createGoogleGenerativeAI({
-        baseURL: `${gateway('google-ai-studio')}/v1beta`,
+        baseURL: gateway('google-ai-studio', '/v1beta'),
         apiKey,
         headers,
       });

@@ -81,6 +81,52 @@ describe('resolveModel', () => {
     expect(calls[0]?.headers.get('cf-aig-authorization')).toBe('Bearer tok');
   });
 
+  it.each([
+    [
+      'anthropic',
+      DEFAULT_CONFIG,
+      { ANTHROPIC_API_KEY: 'k' },
+      'https://api.anthropic.com/v1/messages',
+    ],
+    [
+      'openai',
+      { ...DEFAULT_CONFIG, provider: 'openai', model: 'gpt-5' },
+      { OPENAI_API_KEY: 'k' },
+      'https://api.openai.com/v1/responses',
+    ],
+    [
+      'google',
+      { ...DEFAULT_CONFIG, provider: 'google', model: 'gemini-3-pro' },
+      { GOOGLE_API_KEY: 'k' },
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro:streamGenerateContent?alt=sse',
+    ],
+  ] as const)(
+    'calls %s directly when AI_GATEWAY_URL is empty (local dev)',
+    async (_n, config, keys, url) => {
+      const calls: { url: string; headers: Headers }[] = [];
+      const orig = globalThis.fetch;
+      globalThis.fetch = ((input: Request | string | URL, init?: RequestInit) => {
+        calls.push({ url: String(input), headers: new Headers(init?.headers) });
+        return Promise.resolve(new Response('{}', { status: 500 }));
+      }) as typeof fetch;
+      try {
+        const r = resolveModel(config, real({ AI_GATEWAY_URL: '', CF_AIG_TOKEN: 'tok', ...keys }));
+        const res = streamText({ model: r.model, prompt: 'hi', maxRetries: 0, onError: () => {} });
+        await res.consumeStream({ onError: () => {} });
+      } finally {
+        globalThis.fetch = orig;
+      }
+      expect(calls[0]?.url).toBe(url);
+      expect(calls[0]?.headers.get('cf-aig-authorization')).toBeNull();
+    },
+  );
+
+  it('needs the provider key when AI_GATEWAY_URL is empty, even with a gateway token', () => {
+    expect(() =>
+      resolveModel(DEFAULT_CONFIG, real({ AI_GATEWAY_URL: '', CF_AIG_TOKEN: 'tok' })),
+    ).toThrow(MissingKeyError);
+  });
+
   it('echoes the last user text with MOCK_MODEL=echo', async () => {
     const r = resolveModel(DEFAULT_CONFIG, { ...env, MOCK_MODEL: 'echo' });
     const res = streamText({

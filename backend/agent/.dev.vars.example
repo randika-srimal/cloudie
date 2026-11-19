@@ -2,10 +2,15 @@
 # Production values: ./cli.sh set-agent-secret.
 
 # Answers "echo: <your message>" instead of calling a model: what the e2e chat test expects, and free.
-# To talk to a real model locally, remove it and set CF_AIG_TOKEN (or a provider key) below.
 MOCK_MODEL=echo
 
-# CF_AIG_TOKEN=
+# To talk to a real model locally with only a provider key: comment out MOCK_MODEL above, uncomment the
+# two lines below and restart the stack. An empty AI_GATEWAY_URL calls the provider directly (no AI Gateway).
+# AI_GATEWAY_URL=
 # ANTHROPIC_API_KEY=
+
+# Or go through a real AI Gateway: set AI_GATEWAY_URL to its full URL, plus CF_AIG_TOKEN when the gateway
+# has authentication on (and a provider key unless the gateway stores one).
+# CF_AIG_TOKEN=
 # OPENAI_API_KEY=
 # GOOGLE_API_KEY=

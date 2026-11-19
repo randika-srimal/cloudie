@@ -15,6 +15,9 @@ bad=0
 problem() { echo "check-synced: $*" >&2; bad=1; }
 
 grep -q 'ACCOUNT_ID' "$AGENT" && problem "backend/agent/wrangler.toml still has the ACCOUNT_ID placeholder (AI_GATEWAY_URL)"
+# An empty AI_GATEWAY_URL makes the agent call providers directly (local dev only, via .dev.vars).
+grep -Eq '^[[:space:]]*AI_GATEWAY_URL = "https://gateway\.ai\.cloudflare\.com/v1/[0-9a-f]{32}/[^"]+"' "$AGENT" ||
+  problem "backend/agent/wrangler.toml AI_GATEWAY_URL is not a full AI Gateway URL"
 grep -Eq '^[[:space:]]*id = "0{32}"' "$AGENT" && problem "backend/agent/wrangler.toml still has the all-zero KV namespace id"
 grep -Eq '^[[:space:]]*ALLOWED_ORIGINS = ".*unsynced.*"' "$WEB" && problem "backend/api/wrangler.toml still has the placeholder production ALLOWED_ORIGINS"
 

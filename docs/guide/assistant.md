@@ -162,8 +162,19 @@ judge whether other details give a client away, or whether a draft says too much
 
 The dev stack (`./cli.sh up`) runs the agent Worker with `MOCK_MODEL=echo` from `backend/agent/.dev.vars`
 (copied from `.dev.vars.example` on first start): every answer is `echo: <your message>`, costs nothing and
-needs no key. To try a real model, remove that line, add `CF_AIG_TOKEN` (or a provider key) and restart the
-stack.
+needs no key. To try a real model with only an Anthropic key, edit `backend/agent/.dev.vars`, then restart the
+stack (`./cli.sh down`, `./cli.sh up`):
+
+```
+# MOCK_MODEL=echo
+AI_GATEWAY_URL=
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+An empty `AI_GATEWAY_URL` makes the agent call the provider directly instead of through AI Gateway. It only
+works locally: `.dev.vars` is never deployed, and `scripts/check-synced.sh` refuses to deploy unless
+`backend/agent/wrangler.toml` holds a full gateway URL. To go through a real gateway instead, set
+`AI_GATEWAY_URL` to its URL and add `CF_AIG_TOKEN` if the gateway has authentication on.
 
 The local agent reads the local KV and R2 in `.wrangler/state`, which start empty: until a knowledge base is
 published there it answers with the fallback message. `./cli.sh kb-publish-local` builds `knowledge/` and
