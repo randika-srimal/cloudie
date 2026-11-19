@@ -41,10 +41,17 @@
   onMount(() => void start());
   onDestroy(() => handle?.close());
 
-  function send(): void {
-    const text = input.trim();
+  /** Starter questions shown on an empty chat; clicking one sends it. */
+  const SUGGESTIONS = [
+    'Which case studies cover a Salesforce to HubSpot migration?',
+    'What services does Engaging offer?',
+    'How should I position Engaging for a manufacturing prospect?',
+  ];
+
+  function send(prompt?: string): void {
+    const text = (prompt ?? input).trim();
     if (!chat || busy || !text) return;
-    input = '';
+    if (prompt === undefined) input = '';
     void chat.sendMessage({ text: text.slice(0, MAX_CHARS) });
     textarea.focus();
   }
@@ -99,18 +106,38 @@
 </script>
 
 <svelte:head>
-  <title>Sales assistant</title>
+  <title>Sales assistant · Engaging.io</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="flex h-dvh flex-col bg-surface text-ink">
-  <header class="flex items-center justify-between border-b border-current/10 px-4 py-2">
-    <h1 class="text-base font-semibold">Sales assistant</h1>
+  <header class="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+    <div class="flex min-w-0 items-center gap-3">
+      <img
+        src="/brand/engaging-logo.png"
+        alt="Engaging.io"
+        width="120"
+        height="32"
+        class="h-8 w-auto"
+      />
+      <span class="h-6 w-px bg-line" aria-hidden="true"></span>
+      <h1 class="truncate text-sm font-semibold tracking-tight">Sales assistant</h1>
+    </div>
     <button
       type="button"
-      class="rounded-md border border-current/15 px-2.5 py-1 text-sm hover:bg-current/5 focus-visible:outline-2 focus-visible:outline-brand"
+      class="flex shrink-0 items-center gap-1.5 rounded-full border-2 border-ink px-3 py-1 text-xs font-bold transition-colors hover:bg-ink hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       onclick={newChat}
     >
+      <svg
+        viewBox="0 0 16 16"
+        class="size-3.5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path d="M8 3v10M3 8h10" stroke-linecap="round" />
+      </svg>
       New chat
     </button>
   </header>
@@ -118,48 +145,96 @@
   <section
     bind:this={list}
     aria-label="Conversation"
-    class="flex-1 space-y-3 overflow-y-auto px-4 py-3"
+    class="flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(to_bottom,var(--color-surface),var(--color-panel)_140%)] px-4 py-5"
   >
     {#if !chat || chat.messages.length === 0}
-      <p class="text-sm text-muted">
-        Ask about Engaging's services, case studies or how to position them for a prospect.
-      </p>
+      <div
+        class="mx-auto max-w-md rounded-xl border-l-4 border-brand bg-surface p-5 shadow-[0_1px_3px_rgb(33_32_41/0.08),0_4px_12px_rgb(33_32_41/0.06)]"
+      >
+        <h2 class="text-lg font-bold">Hi there <span aria-hidden="true">👋</span></h2>
+        <p class="mt-1 text-sm text-muted">
+          Ask about Engaging's services, case studies or how to position them for a prospect.
+        </p>
+        <ul class="mt-4 flex flex-col gap-2" aria-label="Suggested questions">
+          {#each SUGGESTIONS as suggestion (suggestion)}
+            <li>
+              <button
+                type="button"
+                disabled={!chat || connecting || busy}
+                onclick={() => send(suggestion)}
+                class="w-full rounded-lg bg-brand-pale px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-pale disabled:hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                {suggestion}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </div>
     {/if}
 
     {#each chat?.messages ?? [] as message (message.id)}
       {#if message.role === 'user'}
-        <div class="flex justify-end">
+        <div class="bubble-in flex justify-end">
           <p
-            class="max-w-[85%] rounded-2xl rounded-br-sm bg-brand px-3 py-2 text-sm whitespace-pre-wrap text-white"
+            class="max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-white shadow-sm"
           >
             <span class="sr-only">You:</span>
             {textOf(message)}
           </p>
         </div>
       {:else if message.role === 'assistant'}
-        <div class="max-w-[95%] text-sm">
-          <span class="sr-only">Assistant:</span>
-          {#each message.parts as part, i (i)}
-            {#if part.type === 'text'}
-              <!-- renderReply sanitises with DOMPurify and strips links not on the allowlist -->
-              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-              <div class="reply">{@html renderReply(part.text, allowlist)}</div>
+        <div class="bubble-in flex items-end gap-2">
+          <span
+            class="mb-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand text-sm leading-none font-bold text-white"
+            aria-hidden="true"
+          >
+            e
+          </span>
+          <div
+            class="max-w-[85%] min-w-0 rounded-2xl rounded-bl-md border border-line bg-surface px-4 py-2.5 text-sm leading-relaxed shadow-[0_1px_3px_rgb(33_32_41/0.08),0_4px_12px_rgb(33_32_41/0.06)]"
+          >
+            <span class="sr-only">Assistant:</span>
+            {#each message.parts as part, i (i)}
+              {#if part.type === 'text'}
+                <!-- renderReply sanitises with DOMPurify and strips links not on the allowlist -->
+                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+                <div class="reply">{@html renderReply(part.text, allowlist)}</div>
+              {/if}
+            {/each}
+            {#if usingTool(message)}
+              <p class="mt-1 flex items-center gap-1.5 text-xs text-muted italic">
+                <span class="size-1.5 animate-pulse rounded-full bg-brand" aria-hidden="true"
+                ></span>
+                Reading a web page…
+              </p>
             {/if}
-          {/each}
-          {#if usingTool(message)}
-            <p class="text-xs text-muted italic">Reading a web page…</p>
-          {/if}
+          </div>
         </div>
       {/if}
     {/each}
 
     {#if status === 'submitted'}
-      <p class="text-sm text-muted italic">Thinking…</p>
+      <div class="bubble-in flex items-end gap-2">
+        <span
+          class="mb-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand text-sm leading-none font-bold text-white"
+          aria-hidden="true"
+        >
+          e
+        </span>
+        <div
+          class="flex items-center gap-1 rounded-2xl rounded-bl-md border border-line bg-surface px-4 py-3.5 shadow-sm"
+        >
+          <span class="sr-only">Thinking…</span>
+          <span class="typing-dot" aria-hidden="true"></span>
+          <span class="typing-dot [animation-delay:150ms]" aria-hidden="true"></span>
+          <span class="typing-dot [animation-delay:300ms]" aria-hidden="true"></span>
+        </div>
+      </div>
     {/if}
     {#if status === 'error'}
-      <p class="text-sm text-red-600" role="alert">
+      <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
         The reply did not come through.
-        <button type="button" class="underline" onclick={() => chat?.regenerate()}>
+        <button type="button" class="font-semibold underline" onclick={() => chat?.regenerate()}>
           Try again
         </button>
       </p>
@@ -168,21 +243,22 @@
 
   <div class="sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
 
-  <footer class="border-t border-current/10 px-4 pt-2 pb-1">
+  <footer class="border-t border-line bg-surface px-4 pt-3 pb-2">
     {#if verifyFailed}
-      <p class="mb-2 text-sm text-red-600" role="alert">
+      <p class="mb-2 text-sm text-red-700" role="alert">
         We couldn't verify your browser.
-        <button type="button" class="underline" onclick={start}>Try again</button>
+        <button type="button" class="font-semibold underline" onclick={start}>Try again</button>
       </p>
     {:else if handle?.connection.gaveUp}
-      <p class="mb-2 text-sm text-red-600" role="alert">
+      <p class="mb-2 text-sm text-red-700" role="alert">
         The connection was lost.
-        <button type="button" class="underline" onclick={() => handle?.reconnect()}>
+        <button type="button" class="font-semibold underline" onclick={() => handle?.reconnect()}>
           Reconnect
         </button>
       </p>
     {:else if connecting}
-      <p class="mb-2 text-xs text-muted" aria-live="polite">
+      <p class="mb-2 flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
+        <span class="size-1.5 animate-pulse rounded-full bg-brand" aria-hidden="true"></span>
         {handle?.connection.everOpened ? 'Reconnecting…' : 'Connecting…'}
       </p>
     {/if}
@@ -190,7 +266,7 @@
     <Turnstile bind:this={turnstile} sitekey={PUBLIC_TURNSTILE_SITEKEY} />
 
     <form
-      class="flex items-end gap-2"
+      class="flex items-end gap-2 rounded-2xl border border-line bg-panel p-1.5 transition-colors focus-within:border-brand focus-within:bg-surface"
       onsubmit={(e) => {
         e.preventDefault();
         send();
@@ -206,17 +282,22 @@
         rows="2"
         placeholder="Ask a question…"
         aria-describedby="chat-hint"
-        class="max-h-40 min-h-11 flex-1 resize-y rounded-lg border border-current/20 bg-transparent px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-brand"
+        class="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2.5 py-2 text-sm placeholder:text-muted focus:outline-none"
       ></textarea>
       <button
         type="submit"
         disabled={!canSend}
-        class="h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        aria-label="Send"
+        class="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white transition-colors hover:bg-brand-strong disabled:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       >
-        Send
+        <svg viewBox="0 0 20 20" class="size-5" fill="currentColor" aria-hidden="true">
+          <path
+            d="M3.1 2.3a.75.75 0 0 0-1 .9l1.9 6.05H11a.75.75 0 0 1 0 1.5H4l-1.9 6.05a.75.75 0 0 0 1 .9l15-7.25a.75.75 0 0 0 0-1.35l-15-6.8Z"
+          />
+        </svg>
       </button>
     </form>
-    <p id="chat-hint" class="mt-1 flex justify-between text-[11px] text-muted">
+    <p id="chat-hint" class="mt-1.5 flex justify-between px-1 text-[11px] text-muted">
       <span>Enter to send, Shift+Enter for a new line</span>
       <span>
         {#if input.length > MAX_CHARS - 500}{input.length} / {MAX_CHARS} ·
@@ -229,6 +310,18 @@
 <style>
   .reply :global(p) {
     margin: 0.4em 0;
+  }
+  .reply :global(:first-child) {
+    margin-top: 0;
+  }
+  .reply :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .reply :global(strong) {
+    font-weight: 700;
+  }
+  .reply :global(li::marker) {
+    color: var(--color-brand);
   }
   .reply :global(ul) {
     list-style: disc;
@@ -243,12 +336,14 @@
   .reply :global(h1),
   .reply :global(h2),
   .reply :global(h3) {
-    font-weight: 600;
-    margin: 0.6em 0 0.2em;
+    font-weight: 700;
+    margin: 0.8em 0 0.3em;
   }
   .reply :global(a) {
-    color: var(--color-brand);
+    color: var(--color-brand-strong);
+    font-weight: 600;
     text-decoration: underline;
+    text-underline-offset: 2px;
   }
   .reply :global(code) {
     font-size: 0.9em;
@@ -262,7 +357,51 @@
   }
   .reply :global(th),
   .reply :global(td) {
-    border: 1px solid color-mix(in oklch, currentColor 15%, transparent);
-    padding: 0.2em 0.5em;
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.35em 0.6em;
+    text-align: left;
+  }
+  .reply :global(th) {
+    background: var(--color-ink);
+    color: #fff;
+    font-weight: 700;
+  }
+  .reply :global(tbody tr:nth-child(odd) td) {
+    background: var(--color-brand-pale);
+  }
+
+  .bubble-in {
+    animation: bubble-in 180ms ease-out both;
+  }
+  @keyframes bubble-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  .typing-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-brand);
+    animation: typing 1s ease-in-out infinite;
+  }
+  @keyframes typing {
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+      transform: translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble-in,
+    .typing-dot {
+      animation: none;
+    }
   }
 </style>
