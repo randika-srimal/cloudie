@@ -223,7 +223,7 @@ importers:
       '@cloudflare/ai-chat':
         specifier: ^0.12.2
         version: 0.12.2(agents@0.33.0(@ai-sdk/provider@4.0.38)(@babel/core@8.1.2)(@babel/runtime@7.29.14)(@modelcontextprotocol/client@2.4.0)(ai@7.0.173(zod@4.6.7))(rolldown@1.2.19)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(zod@4.6.7))(ai@7.0.173(zod@4.6.7))
-      '@cloudie/protocol':
+      '@engaging-assistant/protocol':
         specifier: workspace:*
         version: link:../../shared/protocol
       agents:
@@ -254,7 +254,7 @@ importers:
 
   backend/api:
     dependencies:
-      '@cloudie/protocol':
+      '@engaging-assistant/protocol':
         specifier: workspace:*
         version: link:../../shared/protocol
     devDependencies:
@@ -292,7 +292,7 @@ importers:
       '@ai-sdk/svelte':
         specifier: ^5.0.173
         version: 5.0.173(svelte@5.58.0(@typescript-eslint/types@8.73.0))(zod@4.6.7)
-      '@cloudie/protocol':
+      '@engaging-assistant/protocol':
         specifier: workspace:*
         version: link:../shared/protocol
       '@fontsource-variable/epilogue':

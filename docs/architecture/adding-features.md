@@ -25,7 +25,7 @@ For a page that only works in the browser (it reads the URL at runtime, e.g. `/i
 
    ```ts
    // backend/api/functions/api/notes/[id].ts → GET /api/notes/:id
-   import type { Note } from '@cloudie/protocol';
+   import type { Note } from '@engaging-assistant/protocol';
    import type { Env } from '../../_lib/env.ts';
    import { error } from '../../_lib/http.ts';
 
@@ -62,13 +62,13 @@ D1 is Cloudflare's SQLite database.
    ```toml
    [[d1_databases]]
    binding = "DB"
-   database_name = "cloudie-db"
+   database_name = "engaging-assistant-db"
    database_id = "<from ./cli.sh infra-output>"
    migrations_dir = "../migrations"
    ```
 
 4. Write migrations in `backend/migrations/0001_init.sql`. Apply locally with
-   `docker compose exec app pnpm --filter api exec wrangler d1 migrations apply cloudie-db --local --persist-to ../../.wrangler/state`,
+   `docker compose exec app pnpm --filter api exec wrangler d1 migrations apply engaging-assistant-db --local --persist-to ../../.wrangler/state`,
    and remotely with `--remote` before deploying code that needs them (add that step to `act_deploy` in
    `scripts/cli.sh` and to the CI `deploy` job). Never edit a migration that has been applied; add a new one.
 5. Add `DB: D1Database` to `Env`, and `d1Databases: ['DB']` to `backend/api/vitest.config.ts`

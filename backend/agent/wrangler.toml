@@ -1,5 +1,5 @@
 # The sales-assistant agent Worker: a Cloudflare Agents SDK Durable Object (SalesAgent) behind /agents/*.
-name = "cloudie-agent"
+name = "engaging-assistant-agent"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
 compatibility_flags = ["nodejs_compat"]
@@ -11,7 +11,7 @@ preview_urls = false
 # Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-agent-secret, never in this file.
 [vars]
 # Written by `./cli.sh infra-write-config` (part of `./cli.sh deploy`) from the Terraform output ai_gateway_url.
-AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/cloudie-assistant" # tf-sync
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/engaging-assistant-assistant" # tf-sync
 
 [[durable_objects.bindings]]
 name = "SalesAgent"
@@ -30,7 +30,7 @@ id = "00000000000000000000000000000000" # tf-sync
 # Terraform creates this bucket (cloudflare_r2_bucket.kb); the name is fixed in backend/infra/main.tf.
 [[r2_buckets]]
 binding = "KB"
-bucket_name = "cloudie-kb"
+bucket_name = "engaging-assistant-kb"
 
 # namespace_id: any positive integer, unique per Cloudflare account (not a resource Terraform creates). Pick
 # different numbers if another Worker in the account already uses 1001 or 1002.

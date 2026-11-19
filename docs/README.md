@@ -1,4 +1,4 @@
-# Cloudie
+# Engaging Assistant
 
 A starter for projects that run on **Cloudflare Pages**.
 Out of the box it is a hello-world page and one API route, wired end to end: the same layout, tooling and

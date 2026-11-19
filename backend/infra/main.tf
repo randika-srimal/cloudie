@@ -55,13 +55,13 @@ resource "cloudflare_dns_record" "web" {
 # `./cli.sh ai-config` and `./cli.sh kb-publish`, never by Terraform.
 resource "cloudflare_workers_kv_namespace" "config" {
   account_id = var.account_id
-  title      = "cloudie-config"
+  title      = "engaging-assistant-config"
 }
 
 # The published knowledge base (kb/<version>/...). Private; prevent_destroy protects the uploaded content.
 resource "cloudflare_r2_bucket" "kb" {
   account_id = var.account_id
-  name       = "cloudie-kb"
+  name       = "engaging-assistant-kb"
 
   lifecycle {
     prevent_destroy = true
@@ -73,7 +73,7 @@ resource "cloudflare_r2_bucket" "kb" {
 # per 60 s (sliding window) across all chats.
 resource "cloudflare_ai_gateway" "assistant" {
   account_id = var.account_id
-  id         = "cloudie-assistant"
+  id         = "engaging-assistant-assistant"
 
   collect_logs               = true
   cache_ttl                  = 0
@@ -88,7 +88,7 @@ resource "cloudflare_ai_gateway" "assistant" {
 # HubSpot page address that needs it too.
 resource "cloudflare_turnstile_widget" "chat" {
   account_id = var.account_id
-  name       = "cloudie-chat"
+  name       = "engaging-assistant-chat"
   mode       = "invisible"
   domains    = concat([cloudflare_pages_project.web.subdomain], sort(tolist(var.custom_domains)), var.hubspot_domains)
 }
@@ -97,14 +97,14 @@ resource "cloudflare_turnstile_widget" "chat" {
 #
 # resource "cloudflare_d1_database" "main" {
 #   account_id = var.account_id
-#   name       = "cloudie-db"
+#   name       = "engaging-assistant-db"
 #   read_replication = { mode = "disabled" }
 #   lifecycle { prevent_destroy = true }
 # }
 #
 # resource "cloudflare_r2_bucket" "files" {
 #   account_id = var.account_id
-#   name       = "cloudie-files"
+#   name       = "engaging-assistant-files"
 #   lifecycle { prevent_destroy = true }
 # }
 #

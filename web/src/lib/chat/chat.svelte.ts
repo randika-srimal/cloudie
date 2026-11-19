@@ -2,7 +2,7 @@
 // /agents/sales-agent/<sessionId>), the SDK's WebSocketChatTransport over it, and the AI SDK's Svelte Chat on
 // top. The agent pushes its state (KB version and link allowlist) on connect.
 import { Chat } from '@ai-sdk/svelte';
-import { AgentState } from '@cloudie/protocol';
+import { AgentState } from '@engaging-assistant/protocol';
 import type { UIMessage } from 'ai';
 import { WebSocketChatTransport } from 'agents/chat/transport';
 import { AgentClient } from 'agents/client';

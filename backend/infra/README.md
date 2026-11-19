@@ -7,7 +7,7 @@ one command away and every change shows up as a plan before it happens.
 | -------------- | ------------------------------------------------------------------------------------------------------- |
 | `versions.tf`  | Terraform `~> 1.17`, Cloudflare provider `~> 5.29`                                                      |
 | `providers.tf` | The provider; it reads `CLOUDFLARE_API_TOKEN` from the environment                                      |
-| `backend.tf`   | Where the state lives: the private R2 bucket `cloudie-tfstate`                                          |
+| `backend.tf`   | Where the state lives: the private R2 bucket `engaging-assistant-tfstate`                               |
 | `variables.tf` | Project name, production branch, optional zone, custom domains and HubSpot domains                      |
 | `main.tf`      | The Pages project, custom domains and DNS records, and the assistant's KV, R2, AI Gateway and Turnstile |
 | `outputs.tf`   | Addresses, and the IDs the assistant's code needs (see [Assistant resources](#assistant-resources))     |
@@ -30,12 +30,12 @@ Anything else: `docker compose exec app pnpm tf <terraform command>`.
 
 ## Assistant resources
 
-| Resource                                 | Name or ID          | Notes                                                                                                               |
-| ---------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `cloudflare_workers_kv_namespace.config` | `cloudie-config`    | The agent's `CONFIG` binding; the contents are written by `./cli.sh ai-config` and `kb-publish`                     |
-| `cloudflare_r2_bucket.kb`                | `cloudie-kb`        | The agent's `KB` binding; `prevent_destroy`                                                                         |
-| `cloudflare_ai_gateway.assistant`        | `cloudie-assistant` | Logs on, no cache, 300 requests per 60 s (sliding), authenticated: the agent sends the Worker secret `CF_AIG_TOKEN` |
-| `cloudflare_turnstile_widget.chat`       | `cloudie-chat`      | Invisible. Allowed domains: the `pages.dev` address, `custom_domains` and `hubspot_domains`                         |
+| Resource                                 | Name or ID                     | Notes                                                                                                               |
+| ---------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `cloudflare_workers_kv_namespace.config` | `engaging-assistant-config`    | The agent's `CONFIG` binding; the contents are written by `./cli.sh ai-config` and `kb-publish`                     |
+| `cloudflare_r2_bucket.kb`                | `engaging-assistant-kb`        | The agent's `KB` binding; `prevent_destroy`                                                                         |
+| `cloudflare_ai_gateway.assistant`        | `engaging-assistant-assistant` | Logs on, no cache, 300 requests per 60 s (sliding), authenticated: the agent sends the Worker secret `CF_AIG_TOKEN` |
+| `cloudflare_turnstile_widget.chat`       | `engaging-assistant-chat`      | Invisible. Allowed domains: the `pages.dev` address, `custom_domains` and `hubspot_domains`                         |
 
 `hubspot_domains` (a list, default empty) only widens the Turnstile widget; it never becomes a chat origin.
 
@@ -44,7 +44,7 @@ Anything else: `docker compose exec app pnpm tf <terraform command>`.
 | `kv_config_id`      | `id` of the `CONFIG` namespace in `backend/agent/wrangler.toml`                                             |
 | `ai_gateway_url`    | `AI_GATEWAY_URL` in `backend/agent/wrangler.toml`                                                           |
 | `chat_origins`      | `ALLOWED_ORIGINS` for production in `backend/api/wrangler.toml` (`https://` + pages.dev and custom domains) |
-| `kb_bucket`         | The bucket name (fixed to `cloudie-kb` in `wrangler.toml` and `scripts/kb/publish.sh`)                      |
+| `kb_bucket`         | The bucket name (fixed to `engaging-assistant-kb` in `wrangler.toml` and `scripts/kb/publish.sh`)           |
 | `turnstile_sitekey` | `PUBLIC_TURNSTILE_SITEKEY` for the web build (the deploy commands read it; CI needs a repository variable)  |
 | `turnstile_secret`  | Sensitive. Becomes the Pages secret `TURNSTILE_SECRET` (below)                                              |
 
@@ -64,7 +64,7 @@ docker compose exec -T app pnpm tf output -raw turnstile_secret   # copy it, the
 openssl rand -base64 32   # copy it, then:
 ./cli.sh set-secret PASS_SECRET
 
-# AI Gateway token: create it in the dashboard (AI → AI Gateway → cloudie-assistant → Settings → Authentication),
+# AI Gateway token: create it in the dashboard (AI → AI Gateway → engaging-assistant-assistant → Settings → Authentication),
 # then set it on the agent Worker, not on Pages:
 ./cli.sh set-agent-secret CF_AIG_TOKEN
 ```
@@ -84,7 +84,7 @@ values never reach the state file.
 The state is Terraform's record of what exists. It lives in R2 (S3-compatible) so it is not tied to one laptop,
 with a lock file so two applies can't overlap. The bucket is created by a plain API call in `infra-bootstrap`
 because a configuration cannot safely manage the bucket holding its own state. Its S3 key pair comes from the
-`cloudie-terraform-state` token, which can touch only that bucket.
+`engaging-assistant-terraform-state` token, which can touch only that bucket.
 
 ## Credentials
 

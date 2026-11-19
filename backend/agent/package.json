@@ -13,7 +13,7 @@
     "@ai-sdk/google": "^4.0.121",
     "@ai-sdk/openai": "^4.0.118",
     "@cloudflare/ai-chat": "^0.12.2",
-    "@cloudie/protocol": "workspace:*",
+    "@engaging-assistant/protocol": "workspace:*",
     "agents": "^0.33.0",
     "ai": "^7.0.173",
     "zod": "^4.6.7"

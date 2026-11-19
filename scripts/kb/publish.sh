@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publishes knowledge/ to the running assistant without a code deploy:
 #   1. pnpm kb:build (runs the checks; stops on any error)
-#   2. uploads dist/kb/<version>/{instructions.md,prompt.md,manifest.json} to R2: cloudie-kb/kb/<version>/
+#   2. uploads dist/kb/<version>/{instructions.md,prompt.md,manifest.json} to R2: engaging-assistant-kb/kb/<version>/
 #   3. sets kbVersion in the agent's KV config (key `config`, binding CONFIG), keeping every other setting
 # The agent reads the config within a minute and loads the new version. Old versions stay in R2, so rolling
 # back is setting kbVersion to an earlier version (./cli.sh ai-config).
@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-BUCKET="cloudie-kb"
+BUCKET="engaging-assistant-kb"
 wrangler() { (cd "$ROOT/backend/agent" && pnpm exec wrangler "$@"); }
 
 TARGET=(--remote)

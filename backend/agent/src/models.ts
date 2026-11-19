@@ -1,7 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import type { AssistantConfig } from '@cloudie/protocol';
+import type { AssistantConfig } from '@engaging-assistant/protocol';
 import type { LanguageModel } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
 import type { Env } from './env.ts';

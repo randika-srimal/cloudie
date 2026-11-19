@@ -1,4 +1,4 @@
-# Cloudie: Cloudflare Pages starter
+# Engaging Assistant: Cloudflare Pages starter
 
 Docs: docs/README.md (docsify). Read the page for the area you change.
 
@@ -7,7 +7,7 @@ Docs: docs/README.md (docsify). Read the page for the area you change.
 - Node.js 26, pnpm 12 workspaces (web, backend/_, shared/_), TypeScript 6 strict everywhere
 - web/: SvelteKit 3 (config lives in web/vite.config.ts; there is no svelte.config.js), Svelte 5 runes, Tailwind 4, adapter-static, every page prerendered
 - backend/api: Pages Functions in backend/api/functions; its wrangler.toml deploys web/build and the functions as one Pages project
-- backend/agent: the sales-assistant Worker cloudie-agent (Agents SDK SalesAgent Durable Object, AI SDK through AI Gateway, config in KV, knowledge base in R2); docs/guide/assistant.md
+- backend/agent: the sales-assistant Worker engaging-assistant-agent (Agents SDK SalesAgent Durable Object, AI SDK through AI Gateway, config in KV, knowledge base in R2); docs/guide/assistant.md
 - knowledge/: the assistant's knowledge base (one markdown file per case study), built and published by scripts/kb, separately from code deploys
 - shared/protocol: Zod (zod/mini) schemas for every API reply, imported by the API, the website and tests
 - backend/infra/: Terraform (Cloudflare provider v5) owns the Pages project, domains, DNS, KV, R2, AI Gateway, Turnstile; state in R2. Wrangler owns code, secrets, bindings, migrations

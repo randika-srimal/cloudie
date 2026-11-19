@@ -1,4 +1,4 @@
-// /agents/*: the guarded proxy from the chat page to the agent Worker (cloudie-agent, the AGENT service
+// /agents/*: the guarded proxy from the chat page to the agent Worker (engaging-assistant-agent, the AGENT service
 // binding). The chat page's URL is public, so every request (WebSocket upgrade, or the Agents SDK's HTTP
 // GET/POST) must pass, in order: path, Origin, connect limit (WebSocket upgrades only), then a chat_pass
 // cookie or a Turnstile token.

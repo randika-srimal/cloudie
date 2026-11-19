@@ -7,8 +7,8 @@
 # `./cli.sh infra-bootstrap`; a configuration cannot safely manage the bucket that holds its own state.
 terraform {
   backend "s3" {
-    bucket       = "cloudie-tfstate"
-    key          = "cloudie/terraform.tfstate"
+    bucket       = "engaging-assistant-tfstate"
+    key          = "engaging-assistant/terraform.tfstate"
     region       = "auto"
     use_lockfile = true
 

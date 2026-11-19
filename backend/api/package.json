@@ -9,7 +9,7 @@
     "typecheck": "tsc -p functions/tsconfig.json && tsc -p functions-test/tsconfig.json"
   },
   "dependencies": {
-    "@cloudie/protocol": "workspace:*"
+    "@engaging-assistant/protocol": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.8.4",

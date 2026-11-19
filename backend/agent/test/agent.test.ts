@@ -1,6 +1,6 @@
 import { env, runInDurableObject } from 'cloudflare:test';
 import { exports } from 'cloudflare:workers';
-import { DEFAULT_CONFIG } from '@cloudie/protocol';
+import { DEFAULT_CONFIG } from '@engaging-assistant/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_ASSISTANT_CHARS, MAX_HISTORY_CHARS, type SalesAgent } from '../src/agent.ts';
 import { resetConfigCache } from '../src/config.ts';

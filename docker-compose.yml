@@ -3,7 +3,7 @@ services:
   # Packages install on start into the volumes below, so the repo folder never gets a node_modules.
   app:
     build: { context: ., dockerfile: docker/Dockerfile.dev }
-    image: cloudie-dev:local
+    image: engaging-assistant-dev:local
     # Host ports come from .env (copy .env.example) so several projects from this starter can run at once.
     ports:
       - '${WEB_PORT:-5173}:5173' # the site, with hot reload (open this one)

@@ -1,6 +1,6 @@
 # One Cloudflare Pages project: the static site in web/build plus the Pages Functions in ./functions.
 # `name` must match pages_project_name in backend/infra/variables.tf.
-name = "cloudie"
+name = "engaging-assistant"
 pages_build_output_dir = "../../web/build"
 compatibility_date = "2026-11-01"
 
@@ -23,7 +23,7 @@ ALLOWED_ORIGINS = "https://unsynced.invalid" # tf-sync
 
 [[env.production.services]]
 binding = "AGENT"
-service = "cloudie-agent"
+service = "engaging-assistant-agent"
 
 # The agent Worker (backend/agent). The /agents/* proxy forwards to it and calls its allowConnect RPC.
 # Locally, `wrangler pages dev` reaches the `wrangler dev` of backend/agent through the dev registry (both run
@@ -31,19 +31,19 @@ service = "cloudie-agent"
 # connect limit (CONNECT_LIMIT) lives on the agent Worker.
 [[services]]
 binding = "AGENT"
-service = "cloudie-agent"
+service = "engaging-assistant-agent"
 
 # Add bindings here when the project needs them, then create the resource in backend/infra/main.tf:
 #
 # [[d1_databases]]
 # binding = "DB"
-# database_name = "cloudie-db"
+# database_name = "engaging-assistant-db"
 # database_id = "00000000-0000-0000-0000-000000000000"
 # migrations_dir = "../migrations"
 #
 # [[r2_buckets]]
 # binding = "FILES"
-# bucket_name = "cloudie-files"
+# bucket_name = "engaging-assistant-files"
 #
 # [[kv_namespaces]]
 # binding = "KV"

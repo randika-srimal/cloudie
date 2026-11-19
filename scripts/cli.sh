@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cloudie project CLI: every project command behind a gum menu.
+# Engaging Assistant project CLI: every project command behind a gum menu.
 #
 #   ./cli.sh                 interactive menu (from your computer; runs this in the dev container)
 #   ./cli.sh <action>        run one action, e.g. ./cli.sh deploy (see ./cli.sh help)
@@ -14,7 +14,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-APP_NAME="Cloudie"
+APP_NAME="Engaging Assistant"
 WEB_TOML="backend/api/wrangler.toml"
 GREEN=36
 RED=203
@@ -124,7 +124,7 @@ put_pages_secret() {
   printf '%s' "$2" | wrangler pages secret put "$1" --project-name "$(pages_project)"
 }
 put_agent_secret() {
-  gum style --foreground "$DIM" "\$ wrangler secret put $1 (value hidden; cloudie-agent)"
+  gum style --foreground "$DIM" "\$ wrangler secret put $1 (value hidden; engaging-assistant-agent)"
   printf '%s' "$2" | agent_wrangler secret put "$1"
 }
 
@@ -146,7 +146,7 @@ act_set_secret() {
 # ./cli.sh set-agent-secret [NAME]  (e.g. CF_AIG_TOKEN, a provider key)
 act_set_agent_secret() {
   ensure_cloudflare
-  note "A secret on the agent Worker (cloudie-agent): backend/agent reads it as env.<NAME>."
+  note "A secret on the agent Worker (engaging-assistant-agent): backend/agent reads it as env.<NAME>."
   note "Local runs use backend/agent/.dev.vars."
   local name="${1:-}" value
   [[ -n "$name" ]] || name="$(gum input --placeholder "Name, e.g. CF_AIG_TOKEN" --width 60)"
@@ -176,11 +176,11 @@ first_setup_secrets() {
   pass="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64"))')"
   put_pages_secret PASS_SECRET "$pass" || { fail "Could not set PASS_SECRET"; return 1; }
   ok "PASS_SECRET set (generated, 32 random bytes)"
-  note "CF_AIG_TOKEN: an AI Gateway token (AI → AI Gateway → cloudie-assistant → Settings → Authentication)."
+  note "CF_AIG_TOKEN: an AI Gateway token (AI → AI Gateway → engaging-assistant-assistant → Settings → Authentication)."
   aig="$(gum input --password --placeholder "AI Gateway token (CF_AIG_TOKEN)" --width 60)"
   [[ -n "$aig" ]] || { fail "Nothing entered; set it later with ./cli.sh set-agent-secret CF_AIG_TOKEN"; return 1; }
   put_agent_secret CF_AIG_TOKEN "$aig" || { fail "Could not set CF_AIG_TOKEN"; return 1; }
-  ok "CF_AIG_TOKEN set on cloudie-agent"
+  ok "CF_AIG_TOKEN set on engaging-assistant-agent"
 }
 
 act_first_setup() {
@@ -353,7 +353,7 @@ act_deploy() {
   gum style --border rounded --padding "0 2" --border-foreground "$GREEN" \
     "Deploy to production ($(pages_project))" "" \
     "1. Infrastructure: Terraform plan, and apply if anything changed (asks)" \
-    "2. Deploy the agent Worker (cloudie-agent; before Pages, which binds to it)" \
+    "2. Deploy the agent Worker (engaging-assistant-agent; before Pages, which binds to it)" \
     "3. Build and deploy Pages" \
     "4. Health check"
   confirm "Deploy now?" || return 0
@@ -401,7 +401,7 @@ act_kb_check() { run pnpm kb:check; }
 
 act_kb_publish() {
   ensure_cloudflare
-  note "Checks and builds knowledge/, uploads it to R2 (cloudie-kb) and points the live assistant at it."
+  note "Checks and builds knowledge/, uploads it to R2 (engaging-assistant-kb) and points the live assistant at it."
   confirm "Publish the knowledge base to production?" || return 0
   run bash "$ROOT/scripts/kb/publish.sh"
 }
@@ -487,7 +487,7 @@ infra_write_config|Write Terraform IDs into the wrangler.toml files
 infra_check|Format check and validate (no account needed)
 deploy_token|Show the deploy token (for GitHub Actions)"
 MENU_DEPLOY="deploy|Deploy everything (infrastructure, agent Worker, then Pages)
-deploy_agent|Deploy the agent Worker (cloudie-agent)
+deploy_agent|Deploy the agent Worker (engaging-assistant-agent)
 deploy_pages|Build and deploy Pages to production
 deploy_preview|Build and deploy a preview (its own address)
 deployments|List deployments

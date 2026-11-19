@@ -1,4 +1,4 @@
-# Cloudie
+# Engaging Assistant
 
 Engaging's **sales assistant** on Cloudflare: a chat page (`/chat`) that HubSpot embeds, answering sales reps'
 questions from a case-study knowledge base through a model behind AI Gateway. Built on the Cloudie starter for

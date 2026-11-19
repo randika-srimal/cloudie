@@ -1,5 +1,5 @@
 // GET /api/hello: the hello-world route. Replace it with your own.
-import type { Hello } from '@cloudie/protocol';
+import type { Hello } from '@engaging-assistant/protocol';
 
 export const onRequestGet: PagesFunction = ({ request }) => {
   const colo = (request.cf?.colo as string | undefined) ?? 'local';

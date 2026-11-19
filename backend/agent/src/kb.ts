@@ -1,4 +1,4 @@
-import { KbManifest } from '@cloudie/protocol';
+import { KbManifest } from '@engaging-assistant/protocol';
 import { z } from 'zod/mini';
 import type { Env } from './env.ts';
 

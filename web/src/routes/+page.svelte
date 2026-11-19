@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Hello } from '@cloudie/protocol';
+  import { Hello } from '@engaging-assistant/protocol';
 
   // The page itself is static HTML; the greeting below comes live from the Pages Function
   // in backend/api/functions/api/hello.ts.
@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-  <title>Cloudie</title>
+  <title>Engaging Assistant</title>
   <meta name="description" content="Hello world on Cloudflare Pages" />
 </svelte:head>
 

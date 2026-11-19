@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { DEFAULT_CONFIG } from '@cloudie/protocol';
+import { DEFAULT_CONFIG } from '@engaging-assistant/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadConfig, resetConfigCache } from '../src/config.ts';
 

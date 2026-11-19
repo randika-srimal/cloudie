@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { DEFAULT_CONFIG } from '@cloudie/protocol';
+import { DEFAULT_CONFIG } from '@engaging-assistant/protocol';
 import { streamText } from 'ai';
 import { describe, expect, it } from 'vitest';
 import type { Env } from '../src/env.ts';

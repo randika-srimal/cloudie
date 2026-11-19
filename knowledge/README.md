@@ -83,7 +83,7 @@ Merging to `main` publishes automatically (`.github/workflows/kb.yml`, once depl
 
 1. builds the bundle into `dist/kb/<version>/` (the version is a hash of its content, so an unchanged knowledge
    base keeps its version)
-2. uploads it to the R2 bucket `cloudie-kb` under `kb/<version>/`
+2. uploads it to the R2 bucket `engaging-assistant-kb` under `kb/<version>/`
 3. sets `kbVersion` in the assistant's KV config, leaving the model and other settings as they are
 
 The assistant reads its config at most a minute later and loads the new version. `/api/health` shows the

@@ -1,4 +1,4 @@
-import { AssistantConfig, DEFAULT_CONFIG } from '@cloudie/protocol';
+import { AssistantConfig, DEFAULT_CONFIG } from '@engaging-assistant/protocol';
 import { z } from 'zod/mini';
 import type { Env } from './env.ts';
 

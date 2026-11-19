@@ -29,7 +29,7 @@ flowchart LR
 
 The browser talks to Vite; Vite hands every `/api` and `/agents` request to Wrangler, which runs the Functions in
 workerd, the same runtime as production. `pnpm dev` also starts the agent Worker (`wrangler dev` in
-`backend/agent`); `wrangler pages dev` finds it by name (`cloudie-agent`) through Wrangler's local dev registry.
+`backend/agent`); `wrangler pages dev` finds it by name (`engaging-assistant-agent`) through Wrangler's local dev registry.
 The chat proxy accepts the Origin `http://localhost:5173` (`ALLOWED_ORIGINS` in `backend/api/wrangler.toml`); if
 you change `WEB_PORT`, add your address there. Locally, Turnstile uses Cloudflare's always-pass test keys
 (`backend/api/.dev.vars`), and the agent answers `echo: <message>` (`MOCK_MODEL=echo`) from a knowledge base you
@@ -38,11 +38,11 @@ agent's `wrangler dev` uses inspector port 9230, because `wrangler pages dev` al
 
 ## The containers
 
-| Service | Image                         | Starts         | Purpose                                                  |
-| ------- | ----------------------------- | -------------- | -------------------------------------------------------- |
-| `app`   | `cloudie-dev:local` (~200 MB) | `./cli.sh up`  | Node 26, pnpm, Wrangler, Terraform, gum. Runs `pnpm dev` |
-| `docs`  | `node:26-alpine`              | `./cli.sh up`  | Serves `docs/` read-only                                 |
-| `e2e`   | Playwright                    | `./cli.sh e2e` | End-to-end tests against the running `app`               |
+| Service | Image                                    | Starts         | Purpose                                                  |
+| ------- | ---------------------------------------- | -------------- | -------------------------------------------------------- |
+| `app`   | `engaging-assistant-dev:local` (~200 MB) | `./cli.sh up`  | Node 26, pnpm, Wrangler, Terraform, gum. Runs `pnpm dev` |
+| `docs`  | `node:26-alpine`                         | `./cli.sh up`  | Serves `docs/` read-only                                 |
+| `e2e`   | Playwright                               | `./cli.sh e2e` | End-to-end tests against the running `app`               |
 
 Why it stays light:
 

@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { exports } from 'cloudflare:workers';
-import { AgentStatus } from '@cloudie/protocol';
+import { AgentStatus } from '@engaging-assistant/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetConfigCache } from '../src/config.ts';
 import type { AgentEntrypoint } from '../src/index.ts';

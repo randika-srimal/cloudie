@@ -2,9 +2,9 @@
 # Makes the three Cloudflare API tokens the project uses, without clicking through
 # permissions in the dashboard:
 #
-#   cloudie-terraform-admin   everything on this account and its zones (Terraform)
-#   cloudie-terraform-state   read/write files in the cloudie-tfstate bucket only
-#   cloudie-deploy            deploy the Worker and Pages, migrations, secrets
+#   engaging-assistant-terraform-admin   everything on this account and its zones (Terraform)
+#   engaging-assistant-terraform-state   read/write files in the engaging-assistant-tfstate bucket only
+#   engaging-assistant-deploy            deploy the Worker and Pages, migrations, secrets
 #
 #   ./cli.sh tokens
 #
@@ -24,11 +24,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CREDS_FILE="$ROOT/.env.cloudflare"
 API="https://api.cloudflare.com/client/v4"
-STATE_BUCKET="cloudie-tfstate"
+STATE_BUCKET="engaging-assistant-tfstate"
 DAYS="${TOKEN_DAYS:-365}"
-ADMIN="cloudie-terraform-admin"
-STATE="cloudie-terraform-state"
-DEPLOY="cloudie-deploy"
+ADMIN="engaging-assistant-terraform-admin"
+STATE="engaging-assistant-terraform-state"
+DEPLOY="engaging-assistant-deploy"
 
 # What Wrangler needs to deploy Pages and the agent Worker, set their secrets and publish the knowledge base
 # (R2 uploads, KV config). Names must match Cloudflare's permission groups exactly; the check below fails with

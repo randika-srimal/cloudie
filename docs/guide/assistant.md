@@ -18,7 +18,7 @@ Notion is not part of this setup: the knowledge base is the markdown in `knowled
 
 ## Change the model
 
-The agent Worker reads its runtime config from the KV key `config` (namespace `cloudie-config`) at most 60
+The agent Worker reads its runtime config from the KV key `config` (namespace `engaging-assistant-config`) at most 60
 seconds after it changes, so a model change needs no deploy. `./cli.sh ai-config` shows the saved config (or the
 defaults when none is saved), opens it in `$EDITOR`, checks it against the `AssistantConfig` schema in
 `shared/protocol` and saves it after asking.
@@ -39,13 +39,13 @@ to save one. A switch to another provider needs that provider's key in the gatew
 
 ## Rotate provider keys
 
-The agent calls every provider through AI Gateway (`cloudie-assistant`) and authenticates to the gateway with the
+The agent calls every provider through AI Gateway (`engaging-assistant-assistant`) and authenticates to the gateway with the
 Worker secret `CF_AIG_TOKEN`. The provider keys themselves live in one of two places:
 
-| Where                                                                                                | Rotate by                                                                           |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| AI Gateway stored keys (BYOK, "bring your own key"): the preferred place                             | Dashboard: **AI → AI Gateway → cloudie-assistant → Provider keys**, replace the key |
-| Secrets on the agent Worker `cloudie-agent`: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` | `./cli.sh set-agent-secret ANTHROPIC_API_KEY` (runs `wrangler secret put`)          |
+| Where                                                                                                           | Rotate by                                                                                      |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| AI Gateway stored keys (BYOK, "bring your own key"): the preferred place                                        | Dashboard: **AI → AI Gateway → engaging-assistant-assistant → Provider keys**, replace the key |
+| Secrets on the agent Worker `engaging-assistant-agent`: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` | `./cli.sh set-agent-secret ANTHROPIC_API_KEY` (runs `wrangler secret put`)                     |
 
 A Worker secret wins over the gateway's stored key when both exist. Both take effect on the next request, with no
 deploy. To rotate `CF_AIG_TOKEN` itself, create a new token in the gateway's **Settings → Authentication**, run
@@ -65,7 +65,7 @@ In short:
 
 ## Roll back
 
-Every published version stays in the R2 bucket `cloudie-kb` under `kb/<version>/`. Run `./cli.sh ai-config`,
+Every published version stays in the R2 bucket `engaging-assistant-kb` under `kb/<version>/`. Run `./cli.sh ai-config`,
 set `kbVersion` to the earlier version (printed by that publish, or in its CI log) and save. Revert the change in
 Git too, or the next merge publishes it again. A code rollback is separate: see
 [Deploy → Rolling back](../operations/deploy.md#rolling-back).
@@ -82,7 +82,7 @@ Add an HTML or embed module to the gated HubSpot page with:
 ></iframe>
 ```
 
-`<domain>` is the Pages address (`cloudie.pages.dev`) or a custom domain. Two settings must name the HubSpot page:
+`<domain>` is the Pages address (`engaging-assistant.pages.dev`) or a custom domain. Two settings must name the HubSpot page:
 
 | Setting                                | Why                                                                                                                   | Where                        |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
@@ -133,7 +133,7 @@ A larger knowledge base costs proportionally more; `pnpm kb:check` prints its si
 
 ### Reading AI Gateway analytics
 
-Dashboard: **AI → AI Gateway → cloudie-assistant**.
+Dashboard: **AI → AI Gateway → engaging-assistant-assistant**.
 
 | Tab       | Shows                                                                                             |
 | --------- | ------------------------------------------------------------------------------------------------- |
@@ -142,7 +142,7 @@ Dashboard: **AI → AI Gateway → cloudie-assistant**.
 
 A warm question shows most of its input tokens as cached; when nearly every call shows a cache write instead,
 questions are more than an hour apart or the knowledge base changed. The agent Worker also logs one line per
-answer, a JSON `usage` object with `in`, `cacheRead`, `cacheWrite`, `out` and `model`, visible in **Workers & Pages → cloudie-agent
+answer, a JSON `usage` object with `in`, `cacheRead`, `cacheWrite`, `out` and `model`, visible in **Workers & Pages → engaging-assistant-agent
 → Logs**. The gateway's rate limit (300 requests per 60 s) is a ceiling on spend; errors with status 429 there
 mean it was reached.
 

@@ -27,7 +27,7 @@ function context(
     'cf-connecting-ip': init.ip ?? `10.7.0.${++ipCounter}`,
     ...init.headers,
   };
-  const request = new Request(`https://cloudie.test${path}`, {
+  const request = new Request(`https://engaging-assistant.test${path}`, {
     method: init.method ?? 'GET',
     headers,
   });
@@ -108,7 +108,7 @@ describe('/agents proxy guards', () => {
     );
     expect(res.status).toBe(200);
     const echo = (await res.json()) as Echo;
-    expect(echo.url).toBe('https://cloudie.test/agents/sales-agent/s1?_pk=abc');
+    expect(echo.url).toBe('https://engaging-assistant.test/agents/sales-agent/s1?_pk=abc');
     expect(echo.ip).toBe('10.6.0.1');
 
     const cookie = res.headers.get('Set-Cookie') ?? '';
@@ -276,7 +276,7 @@ describe('middleware', () => {
   it('adds nosniff to ordinary responses, including ones with immutable headers', async () => {
     const res = await middleware({
       ...context('/x'),
-      next: () => Promise.resolve(Response.redirect('https://cloudie.test/y', 302)),
+      next: () => Promise.resolve(Response.redirect('https://engaging-assistant.test/y', 302)),
     } as unknown as Parameters<typeof middleware>[0]);
     expect(res.status).toBe(302);
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');

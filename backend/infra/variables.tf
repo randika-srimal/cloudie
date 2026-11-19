@@ -11,7 +11,7 @@ variable "account_id" {
 variable "pages_project_name" {
   description = "Pages project name. Also the free address: <name>.pages.dev. Must match `name` in backend/api/wrangler.toml."
   type        = string
-  default     = "cloudie"
+  default     = "engaging-assistant"
 }
 
 variable "production_branch" {

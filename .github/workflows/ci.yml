@@ -74,4 +74,4 @@ jobs:
         run: pnpm exec wrangler deploy
       - name: Deploy Pages
         working-directory: backend/api
-        run: pnpm exec wrangler pages deploy ../../web/build --project-name cloudie --branch main
+        run: pnpm exec wrangler pages deploy ../../web/build --project-name engaging-assistant --branch main

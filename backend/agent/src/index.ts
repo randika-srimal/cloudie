@@ -1,4 +1,4 @@
-import { AgentStatus } from '@cloudie/protocol';
+import { AgentStatus } from '@engaging-assistant/protocol';
 import { routeAgentRequest } from 'agents';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { loadConfig } from './config.ts';

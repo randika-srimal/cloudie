@@ -1,5 +1,5 @@
 import { AIChatAgent, type OnChatMessageOptions } from '@cloudflare/ai-chat';
-import type { AgentState } from '@cloudie/protocol';
+import type { AgentState } from '@engaging-assistant/protocol';
 import { type Connection, type ConnectionContext, getCurrentAgent } from 'agents';
 import {
   convertToModelMessages,

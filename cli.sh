@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cloudie: one entry point for the whole repo. Your computer only needs Docker (and Git Bash on Windows).
+# Engaging Assistant: one entry point for the whole repo. Your computer only needs Docker (and Git Bash on Windows).
 #
 #   ./cli.sh                      the project menu (scripts/cli.sh in the dev container)
 #   ./cli.sh <action>             one menu action, e.g. ./cli.sh deploy, ./cli.sh help

@@ -130,13 +130,13 @@
 
 **Setup:**
 
-- `package.json` name `agent`. Dependencies: `agents`, `@cloudflare/ai-chat`, `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`, `@cloudie/protocol`, `zod`. Dev dependencies match `backend/api`.
+- `package.json` name `agent`. Dependencies: `agents`, `@cloudflare/ai-chat`, `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`, `@engaging-assistant/protocol`, `zod`. Dev dependencies match `backend/api`.
 - Scripts:
   - `dev`: `wrangler dev --port 8787 --persist-to ../../.wrangler/state`
   - `test`: `vitest run`
   - `typecheck`: `tsc -p .`
 - `wrangler.toml`:
-  - `name="cloudie-agent"`, `main="src/index.ts"`, `compatibility_date="2026-11-01"`, `compatibility_flags=["nodejs_compat"]`
+  - `name="engaging-assistant-agent"`, `main="src/index.ts"`, `compatibility_date="2026-11-01"`, `compatibility_flags=["nodejs_compat"]`
   - a Durable Object binding `SalesAgent` with `class_name="SalesAgent"`, and `[[migrations]] tag="v1" new_sqlite_classes=["SalesAgent"]`
   - `[[kv_namespaces]] CONFIG` and `[[r2_buckets]] KB`, with ids from Terraform outputs and placeholders until Task 11
   - `[[ratelimits]] RATE_LIMIT` with `limit=20`, `period=60`
@@ -279,7 +279,7 @@
 - Create: `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts`
 - Modify:
   - `backend/api/functions/_lib/env.ts`: add `AGENT: Fetcher`, `CONNECT_LIMIT: RateLimit`, `TURNSTILE_SECRET: string`, `PASS_SECRET: string`, `ALLOWED_ORIGINS: string`
-  - `backend/api/wrangler.toml`: add `[[services]] binding="AGENT" service="cloudie-agent"`, `[[ratelimits]] CONNECT_LIMIT limit=10 period=60` and the `ALLOWED_ORIGINS` var
+  - `backend/api/wrangler.toml`: add `[[services]] binding="AGENT" service="engaging-assistant-agent"`, `[[ratelimits]] CONNECT_LIMIT limit=10 period=60` and the `ALLOWED_ORIGINS` var
   - `backend/api/vitest.config.ts`: add bindings and a fake `AGENT` service
   - `.dev.vars.example`: the Turnstile test secret and a dev `PASS_SECRET`
 - Test: `backend/api/functions-test/agents.test.ts`
@@ -310,7 +310,7 @@
   - The 11th connect in a minute gets 429.
   - `/agents/other/x` gets 404.
 - [ ] **Step 2:** Run the tests; they should fail. **Step 3:** Implement. **Step 4:** Run the tests; they should pass.
-- [ ] **Step 5:** Update the root `dev` script so `pnpm --filter agent dev` runs alongside api and vite, and `wrangler pages dev` finds `cloudie-agent` through the local dev registry. Proxy `/agents` with `ws:true` in `web/vite.config.ts`. Set `/api/health` to also return `kbVersion` and `model` through `env.AGENT.fetch('/status')` (add `GET /status` to the agent index, plus `Health` schema fields `kbVersion?` and `model?`) and update its test.
+- [ ] **Step 5:** Update the root `dev` script so `pnpm --filter agent dev` runs alongside api and vite, and `wrangler pages dev` finds `engaging-assistant-agent` through the local dev registry. Proxy `/agents` with `ws:true` in `web/vite.config.ts`. Set `/api/health` to also return `kbVersion` and `model` through `env.AGENT.fetch('/status')` (add `GET /status` to the agent index, plus `Health` schema fields `kbVersion?` and `model?`) and update its test.
 - [ ] **Step 6:** Commit with the message `feat(api): guarded WebSocket proxy to the agent worker`.
 
 ### Task 9: Chat page
@@ -400,7 +400,7 @@
 **`publish.sh`:**
 
 - Runs `pnpm kb:build`.
-- Puts each file with `wrangler r2 object put cloudie-kb/kb/<v>/<file> --remote`.
+- Puts each file with `wrangler r2 object put engaging-assistant-kb/kb/<v>/<file> --remote`.
 - Reads the KV `config`, sets `kbVersion`, and puts it back with `wrangler kv key put config --binding CONFIG --remote`, run from `backend/agent`.
 
 **CLI actions** (in `scripts/cli.sh` under a new `MENU_ASSISTANT` group, which also goes in `MENUS` and in the `menu()` case):
@@ -431,20 +431,20 @@
 
 **Resources:**
 
-- `cloudflare_workers_kv_namespace.config`, titled `cloudie-config`
-- `cloudflare_r2_bucket.kb`, named `cloudie-kb`, with `prevent_destroy`
+- `cloudflare_workers_kv_namespace.config`, titled `engaging-assistant-config`
+- `cloudflare_r2_bucket.kb`, named `engaging-assistant-kb`, with `prevent_destroy`
 - `cloudflare_ai_gateway.assistant`:
-  - `id = "cloudie-assistant"`
+  - `id = "engaging-assistant-assistant"`
   - `collect_logs = true`
   - `cache_ttl = 0`
   - `rate_limiting_limit = 300`, `rate_limiting_interval = 60`, `rate_limiting_technique = "sliding"`
   - `authentication = true`
 - `cloudflare_turnstile_widget.chat`:
-  - `name = "cloudie-chat"`
+  - `name = "engaging-assistant-chat"`
   - `mode = "invisible"`
   - `domains = concat([cloudflare_pages_project.web.subdomain], var.custom_domains, var.hubspot_domains)`
 - New variable `hubspot_domains` (`list(string)`, default `[]`).
-- Outputs: `kv_config_id`, `kb_bucket`, `ai_gateway_url` (`https://gateway.ai.cloudflare.com/v1/${var.account_id}/cloudie-assistant`), `turnstile_sitekey`. The Turnstile secret is marked sensitive; it goes in with `./cli.sh set-secret`, never into a file.
+- Outputs: `kv_config_id`, `kb_bucket`, `ai_gateway_url` (`https://gateway.ai.cloudflare.com/v1/${var.account_id}/engaging-assistant-assistant`), `turnstile_sitekey`. The Turnstile secret is marked sensitive; it goes in with `./cli.sh set-secret`, never into a file.
 - Check every attribute name against the provider schema with `terraform providers schema -json` in the container before writing it.
 - Add to `DEPLOY_PERMISSIONS` in `scripts/tokens.sh`: `"Workers Scripts Write" "Workers KV Storage Write" "Workers R2 Storage Write" "AI Gateway Write"`. Use the exact group names returned by the permission-groups lookup already in the script.
 
@@ -459,7 +459,7 @@
 - Modify: `docs/architecture/overview.md` (the spec's mermaid diagram, resource table rows, glossary entries for Durable Object, AI Gateway, BYOK, Turnstile and KV), `docs/_sidebar.md`, `docs/guide/cli.md`, `docs/operations/deploy.md`, `CLAUDE.md` (stack line for `backend/agent`, a rule that the knowledge base changes through `knowledge/` and `kb:check`)
 - Create: `docs/guide/assistant.md`, covering:
   - changing the model (`./cli.sh ai-config`, with a table of fields)
-  - rotating provider keys (AI Gateway dashboard → Provider keys, or `wrangler secret put` on `cloudie-agent`)
+  - rotating provider keys (AI Gateway dashboard → Provider keys, or `wrangler secret put` on `engaging-assistant-agent`)
   - editing and publishing the knowledge base
   - rolling back (setting an old `kbVersion`)
   - embedding in HubSpot (an `<iframe src="https://<domain>/chat" style="width:100%;height:700px;border:0" allow="clipboard-write">` snippet)

@@ -1,5 +1,5 @@
 // The Functions called directly, inside workerd (the Workers runtime), with a real `env`.
-import { Health, Hello } from '@cloudie/protocol';
+import { Health, Hello } from '@engaging-assistant/protocol';
 import { createExecutionContext, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { onRequestGet as health } from '../functions/api/health.ts';

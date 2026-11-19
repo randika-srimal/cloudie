@@ -22,42 +22,42 @@ container, where gum, pnpm, Wrangler and Terraform live.
 
 ## Actions
 
-| Group            | Action                                | Does                                                                                 |
-| ---------------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
-| On your computer | `up` / `down`                         | Start or stop the dev stack                                                          |
-|                  | `logs-dev`                            | Follow the dev stack's output                                                        |
-|                  | `e2e [filter]`                        | Publish the knowledge base locally, then Playwright tests against the dev stack      |
-| Checks           | `check-all`                           | Typecheck, lint and test                                                             |
-|                  | `test`, `typecheck`, `lint`, `format` | One at a time                                                                        |
-| Local            | `build`                               | Build the website into `web/build`                                                   |
-|                  | `install`                             | `pnpm install` (after editing a `package.json`)                                      |
-|                  | `outdated`                            | Packages with newer versions                                                         |
-|                  | `rename`                              | Rename the starter for a new project ([Start a new project](new-project.md))         |
-| Cloudflare setup | `first-setup`                         | Wizard for a new account: tokens, state bucket, Terraform, deploy, health            |
-|                  | `whoami`                              | Which Cloudflare account Wrangler is using                                           |
-|                  | `set-secret [NAME]`                   | Set a Pages secret (read in Functions as `env.NAME`)                                 |
-|                  | `set-agent-secret [NAME]`             | Set a secret on the agent Worker `cloudie-agent` (`CF_AIG_TOKEN`, provider keys)     |
-|                  | `list-secrets`                        | Secret names (never values)                                                          |
-|                  | `forget-token`                        | Delete `.env.cloudflare`                                                             |
-| Infrastructure   | `tokens`                              | Create the three API tokens ([Deploy](../operations/deploy.md#credentials))          |
-|                  | `infra-bootstrap`                     | Create the Terraform state bucket (once per account)                                 |
-|                  | `infra-plan`                          | Show what Terraform would change                                                     |
-|                  | `infra-apply`                         | Make the changes (asks first)                                                        |
-|                  | `infra-output`                        | The Pages address and domain status                                                  |
-|                  | `infra-write-config`                  | Write the Terraform outputs into the `# tf-sync` lines of both `wrangler.toml` files |
-|                  | `infra-check`                         | `terraform fmt -check` and `validate`, no account needed                             |
-|                  | `deploy-token`                        | Show the deploy token, for GitHub Actions                                            |
-| Deploy           | `deploy`                              | Terraform (if anything changed), agent Worker, build, deploy Pages, health check     |
-|                  | `deploy-agent`                        | Deploy the agent Worker `cloudie-agent` only                                         |
-|                  | `deploy-pages`                        | Build and deploy Pages only                                                          |
-|                  | `deploy-preview`                      | Deploy a preview at `https://<branch>.<project>.pages.dev`                           |
-|                  | `deployments`                         | Recent deployments                                                                   |
-|                  | `logs`                                | Stream production Function logs                                                      |
-|                  | `health`                              | `GET /api/health` on the live site                                                   |
-| Sales assistant  | `kb-check`                            | Check `knowledge/` (`pnpm kb:check`)                                                 |
-|                  | `kb-publish`                          | Build `knowledge/`, upload it to R2 and point the live assistant at it (asks)        |
-|                  | `kb-publish-local`                    | The same into the dev stack's local KV and R2                                        |
-|                  | `ai-config`                           | Show or edit the assistant's runtime config: model, `kbVersion`, …                   |
+| Group            | Action                                | Does                                                                                        |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| On your computer | `up` / `down`                         | Start or stop the dev stack                                                                 |
+|                  | `logs-dev`                            | Follow the dev stack's output                                                               |
+|                  | `e2e [filter]`                        | Publish the knowledge base locally, then Playwright tests against the dev stack             |
+| Checks           | `check-all`                           | Typecheck, lint and test                                                                    |
+|                  | `test`, `typecheck`, `lint`, `format` | One at a time                                                                               |
+| Local            | `build`                               | Build the website into `web/build`                                                          |
+|                  | `install`                             | `pnpm install` (after editing a `package.json`)                                             |
+|                  | `outdated`                            | Packages with newer versions                                                                |
+|                  | `rename`                              | Rename the starter for a new project ([Start a new project](new-project.md))                |
+| Cloudflare setup | `first-setup`                         | Wizard for a new account: tokens, state bucket, Terraform, deploy, health                   |
+|                  | `whoami`                              | Which Cloudflare account Wrangler is using                                                  |
+|                  | `set-secret [NAME]`                   | Set a Pages secret (read in Functions as `env.NAME`)                                        |
+|                  | `set-agent-secret [NAME]`             | Set a secret on the agent Worker `engaging-assistant-agent` (`CF_AIG_TOKEN`, provider keys) |
+|                  | `list-secrets`                        | Secret names (never values)                                                                 |
+|                  | `forget-token`                        | Delete `.env.cloudflare`                                                                    |
+| Infrastructure   | `tokens`                              | Create the three API tokens ([Deploy](../operations/deploy.md#credentials))                 |
+|                  | `infra-bootstrap`                     | Create the Terraform state bucket (once per account)                                        |
+|                  | `infra-plan`                          | Show what Terraform would change                                                            |
+|                  | `infra-apply`                         | Make the changes (asks first)                                                               |
+|                  | `infra-output`                        | The Pages address and domain status                                                         |
+|                  | `infra-write-config`                  | Write the Terraform outputs into the `# tf-sync` lines of both `wrangler.toml` files        |
+|                  | `infra-check`                         | `terraform fmt -check` and `validate`, no account needed                                    |
+|                  | `deploy-token`                        | Show the deploy token, for GitHub Actions                                                   |
+| Deploy           | `deploy`                              | Terraform (if anything changed), agent Worker, build, deploy Pages, health check            |
+|                  | `deploy-agent`                        | Deploy the agent Worker `engaging-assistant-agent` only                                     |
+|                  | `deploy-pages`                        | Build and deploy Pages only                                                                 |
+|                  | `deploy-preview`                      | Deploy a preview at `https://<branch>.<project>.pages.dev`                                  |
+|                  | `deployments`                         | Recent deployments                                                                          |
+|                  | `logs`                                | Stream production Function logs                                                             |
+|                  | `health`                              | `GET /api/health` on the live site                                                          |
+| Sales assistant  | `kb-check`                            | Check `knowledge/` (`pnpm kb:check`)                                                        |
+|                  | `kb-publish`                          | Build `knowledge/`, upload it to R2 and point the live assistant at it (asks)               |
+|                  | `kb-publish-local`                    | The same into the dev stack's local KV and R2                                               |
+|                  | `ai-config`                           | Show or edit the assistant's runtime config: model, `kbVersion`, …                          |
 
 ## Credentials
 

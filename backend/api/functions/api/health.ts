@@ -3,7 +3,7 @@
 // unreachable agent only drops those two fields: health is about the Functions, and the chat page shows
 // its own error when the agent is down.
 // When you add a database, check it here too (e.g. SELECT 1), so a broken binding shows up.
-import { AgentStatus, type Health } from '@cloudie/protocol';
+import { AgentStatus, type Health } from '@engaging-assistant/protocol';
 import type { Env } from '../_lib/env.ts';
 
 async function agentStatus(env: Env): Promise<AgentStatus | undefined> {

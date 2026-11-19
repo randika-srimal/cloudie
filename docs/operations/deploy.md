@@ -11,12 +11,12 @@ The wizard runs these steps, each one skippable:
 | Step                      | Action               | Creates                                                                                                   |
 | ------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
 | 1. API tokens             | `tokens`             | Three tokens, saved to `.env.cloudflare` ([Credentials](#credentials))                                    |
-| 2. Terraform state bucket | `infra-bootstrap`    | Private R2 bucket `cloudie-tfstate`                                                                       |
-| 3. Infrastructure         | `infra-apply`        | Pages project `cloudie` (and custom domains, if set), KV, R2, AI Gateway, Turnstile                       |
+| 2. Terraform state bucket | `infra-bootstrap`    | Private R2 bucket `engaging-assistant-tfstate`                                                            |
+| 3. Infrastructure         | `infra-apply`        | Pages project `engaging-assistant` (and custom domains, if set), KV, R2, AI Gateway, Turnstile            |
 | 4. IDs into code          | `infra-write-config` | The KV id, AI Gateway URL and production `ALLOWED_ORIGINS` in the two `wrangler.toml` files (commit them) |
-| 5. Agent Worker           | `deploy-agent`       | The Worker `cloudie-agent` (Pages' `AGENT` binding and the agent secret need it to exist)                 |
+| 5. Agent Worker           | `deploy-agent`       | The Worker `engaging-assistant-agent` (Pages' `AGENT` binding and the agent secret need it to exist)      |
 | 6. Secrets                | (wizard only)        | `TURNSTILE_SECRET` (read from Terraform), `PASS_SECRET` (generated), `CF_AIG_TOKEN` (you paste it)        |
-| 7. Build and deploy       | `deploy-pages`       | The first production deployment at `https://cloudie.pages.dev`                                            |
+| 7. Build and deploy       | `deploy-pages`       | The first production deployment at `https://engaging-assistant.pages.dev`                                 |
 | 8. Knowledge base         | `kb-publish`         | The first `kbVersion`; until then the chat answers only with its fallback message                         |
 | 9. Health check           | `health`             | Nothing; checks `GET /api/health` answers                                                                 |
 
@@ -28,12 +28,12 @@ path without it.
 The wizard sets these once. To set or rotate one by hand (full commands in
 [Infrastructure → Assistant resources](../../backend/infra/README.md#assistant-resources)):
 
-| What                                             | Where                                      | How                                                           |
-| ------------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------- |
-| `TURNSTILE_SECRET`                               | Pages secret                               | `./cli.sh set-secret TURNSTILE_SECRET`                        |
-| `PASS_SECRET`                                    | Pages secret                               | `./cli.sh set-secret PASS_SECRET` (`openssl rand -base64 32`) |
-| `CF_AIG_TOKEN` (AI Gateway token), provider keys | Secret on the agent Worker `cloudie-agent` | `./cli.sh set-agent-secret CF_AIG_TOKEN`                      |
-| `PUBLIC_TURNSTILE_SITEKEY`                       | GitHub repository **variable** (CI only)   | The value of `pnpm tf output -raw turnstile_sitekey`          |
+| What                                             | Where                                                 | How                                                           |
+| ------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------- |
+| `TURNSTILE_SECRET`                               | Pages secret                                          | `./cli.sh set-secret TURNSTILE_SECRET`                        |
+| `PASS_SECRET`                                    | Pages secret                                          | `./cli.sh set-secret PASS_SECRET` (`openssl rand -base64 32`) |
+| `CF_AIG_TOKEN` (AI Gateway token), provider keys | Secret on the agent Worker `engaging-assistant-agent` | `./cli.sh set-agent-secret CF_AIG_TOKEN`                      |
+| `PUBLIC_TURNSTILE_SITEKEY`                       | GitHub repository **variable** (CI only)              | The value of `pnpm tf output -raw turnstile_sitekey`          |
 
 `./cli.sh deploy` reads the sitekey from Terraform itself. Production `ALLOWED_ORIGINS` (the chat page's own
 addresses, never HubSpot's) is written into `backend/api/wrangler.toml` from the `chat_origins` output; commit it.
@@ -84,11 +84,11 @@ the `wrangler.toml` files, so run `./cli.sh deploy` locally (and commit) after i
 
 `./cli.sh tokens` makes three API tokens from one temporary token, so nobody clicks through permission lists:
 
-| Token                     | Can                                                                                                                     | Used by                  |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `cloudie-terraform-admin` | Everything on the account except managing tokens                                                                        | Terraform                |
-| `cloudie-terraform-state` | Read and write the state bucket only (as an S3 key pair)                                                                | Terraform's backend      |
-| `cloudie-deploy`          | `Account Settings Read`, `Pages Write`, `Workers Scripts Write`, `Workers KV Storage Write`, `Workers R2 Storage Write` | Wrangler, GitHub Actions |
+| Token                                | Can                                                                                                                     | Used by                  |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `engaging-assistant-terraform-admin` | Everything on the account except managing tokens                                                                        | Terraform                |
+| `engaging-assistant-terraform-state` | Read and write the state bucket only (as an S3 key pair)                                                                | Terraform's backend      |
+| `engaging-assistant-deploy`          | `Account Settings Read`, `Pages Write`, `Workers Scripts Write`, `Workers KV Storage Write`, `Workers R2 Storage Write` | Wrangler, GitHub Actions |
 
 1. In the dashboard: **My Profile → API Tokens → Create Token**, template **Create Additional Tokens**,
    create it and copy it.
@@ -112,7 +112,7 @@ when it is active (usually a few minutes, for the certificate).
 
 ## Rolling back
 
-Pages keeps every deployment. In the dashboard: **Workers & Pages → cloudie → Deployments**, pick an earlier one,
+Pages keeps every deployment. In the dashboard: **Workers & Pages → engaging-assistant → Deployments**, pick an earlier one,
 **Rollback to this deployment**. `./cli.sh deployments` lists them. The agent Worker keeps its versions too
-(**Workers & Pages → cloudie-agent → Deployments**), and a knowledge base is rolled back by its `kbVersion`
+(**Workers & Pages → engaging-assistant-agent → Deployments**), and a knowledge base is rolled back by its `kbVersion`
 ([The sales assistant → Roll back](../guide/assistant.md#roll-back)).
