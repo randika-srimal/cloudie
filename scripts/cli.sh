@@ -370,6 +370,12 @@ act_kb_publish() {
   run bash "$ROOT/scripts/kb/publish.sh"
 }
 
+# The dev stack's local KV and R2 (.wrangler/state): no account, no confirmation. ./cli.sh e2e runs it too.
+act_kb_publish_local() {
+  note "Builds knowledge/ and points the local assistant (./cli.sh up) at it."
+  run bash "$ROOT/scripts/kb/publish.sh" --local
+}
+
 # Shows the agent's runtime config (KV key `config`), lets you edit a copy, validates it, then saves it.
 act_ai_config() {
   ensure_cloudflare
@@ -453,6 +459,7 @@ logs|Stream production logs
 health|Health check"
 MENU_ASSISTANT="kb_check|Check the knowledge base (knowledge/)
 kb_publish|Publish the knowledge base to the live assistant
+kb_publish_local|Publish the knowledge base to the local dev stack
 ai_config|Show or edit the assistant config (model, kbVersion, …)"
 MENUS=("$MENU_CHECKS" "$MENU_LOCAL" "$MENU_SETUP" "$MENU_INFRA" "$MENU_DEPLOY" "$MENU_ASSISTANT")
 

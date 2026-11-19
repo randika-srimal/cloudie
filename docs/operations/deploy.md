@@ -33,7 +33,9 @@ After the first `infra-apply`, and before the first deploy (full commands in
 
 `./cli.sh deploy` reads the sitekey from Terraform itself. Production `ALLOWED_ORIGINS` (the chat page's own
 addresses, never HubSpot's) is written into `backend/api/wrangler.toml` from the `chat_origins` output; commit it.
-Secrets set on the agent Worker need the Worker to exist, so run `./cli.sh deploy-agent` once first.
+Secrets set on the agent Worker need the Worker to exist, so run `./cli.sh deploy-agent` once first. Then publish
+the knowledge base (`./cli.sh kb-publish`): until a `kbVersion` is set the chat answers only with its fallback
+message. Day-to-day operation (model, keys, HubSpot embed, costs) is in [The sales assistant](../guide/assistant.md).
 
 ## Every deploy
 
@@ -107,4 +109,6 @@ when it is active (usually a few minutes, for the certificate).
 ## Rolling back
 
 Pages keeps every deployment. In the dashboard: **Workers & Pages → cloudie → Deployments**, pick an earlier one,
-**Rollback to this deployment**. `./cli.sh deployments` lists them.
+**Rollback to this deployment**. `./cli.sh deployments` lists them. The agent Worker keeps its versions too
+(**Workers & Pages → cloudie-agent → Deployments**), and a knowledge base is rolled back by its `kbVersion`
+([The sales assistant → Roll back](../guide/assistant.md#roll-back)).

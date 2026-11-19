@@ -5,7 +5,7 @@
 #   ./cli.sh <action>             one menu action, e.g. ./cli.sh deploy, ./cli.sh help
 #   ./cli.sh up | down            start or stop the dev stack (site :5173, API :8788, docs :3000)
 #   ./cli.sh logs-dev             follow the dev stack's output
-#   ./cli.sh e2e [filter]         Playwright end-to-end tests against the dev stack
+#   ./cli.sh e2e [filter]         Playwright end-to-end tests against the dev stack (publishes the KB locally first)
 #
 # Layout: web/ (SvelteKit), backend/ (api, infra), shared/ (protocol). See docs/README.md.
 set -euo pipefail
@@ -38,6 +38,11 @@ case "${1:-}" in
     step "Site http://localhost:5173  ·  API http://localhost:8788/api/hello  ·  Docs http://localhost:3000" ;;
   down) docker compose down ;;
   logs-dev) docker compose logs -f app ;;
-  e2e) shift; ensure_up; docker compose run --rm e2e "$@" ;;
+  e2e)
+    shift; ensure_up
+    # The chat test needs a knowledge base in the local KV and R2 (and MOCK_MODEL=echo in backend/agent/.dev.vars).
+    step "Publishing the knowledge base locally"
+    docker compose exec -T app bash scripts/kb/publish.sh --local >/dev/null
+    docker compose run --rm e2e "$@" ;;
   *) in_app "$@" ;;
 esac

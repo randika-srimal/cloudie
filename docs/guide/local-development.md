@@ -32,7 +32,9 @@ workerd, the same runtime as production. `pnpm dev` also starts the agent Worker
 `backend/agent`); `wrangler pages dev` finds it by name (`cloudie-agent`) through Wrangler's local dev registry.
 The chat proxy accepts the Origin `http://localhost:5173` (`ALLOWED_ORIGINS` in `backend/api/wrangler.toml`); if
 you change `WEB_PORT`, add your address there. Locally, Turnstile uses Cloudflare's always-pass test keys
-(`backend/api/.dev.vars`).
+(`backend/api/.dev.vars`), and the agent answers `echo: <message>` (`MOCK_MODEL=echo`) from a knowledge base you
+publish locally with `./cli.sh kb-publish-local`: see [The sales assistant → Locally](assistant.md#locally). The
+agent's `wrangler dev` uses inspector port 9230, because `wrangler pages dev` already holds the default 9229.
 
 ## The containers
 

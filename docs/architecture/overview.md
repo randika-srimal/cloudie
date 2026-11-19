@@ -5,26 +5,27 @@ What runs where, who reaches it, and which file defines it.
 ## The pieces
 
 ```mermaid
-flowchart TB
-  subgraph Clients
-    B[Browser]
-  end
-  subgraph Cloudflare["Cloudflare Pages project: cloudie"]
-    S[Static files<br/>web/build, from the CDN]
+flowchart LR
+  HS[HubSpot gated page] -->|iframe| S
+  subgraph Pages["Cloudflare Pages project: cloudie"]
+    S[Static files<br/>web/build incl. /chat, from the CDN]
     F[Pages Functions<br/>/api/*, in workerd]
     P["/agents/* proxy<br/>Origin, connect limit, Turnstile or chat_pass"]
   end
-  A[Agent Worker cloudie-agent<br/>SalesAgent Durable Objects]
-  T[Turnstile siteverify]
-  B -->|"GET /"| S
-  B -->|"GET /api/hello"| F
-  B -->|"WebSocket /agents/sales-agent/:id"| P
-  P -->|"siteverify (first connect)"| T
-  P -->|"AGENT service binding:<br/>allowConnect RPC, then fetch"| A
+  S -->|"GET /api/hello"| F
+  S -->|"WebSocket /agents/sales-agent/:id"| P
+  P -->|"siteverify (first connect)"| T[Turnstile]
+  P -->|"AGENT service binding:<br/>allowConnect RPC, then fetch"| W[Agent Worker cloudie-agent]
+  W --> DO[(SalesAgent Durable Object per chat<br/>SQLite history)]
+  W --> KV[(KV CONFIG<br/>model, kbVersion)]
+  W --> R2[(R2 cloudie-kb<br/>knowledge base)]
+  W -->|AI SDK| GW[AI Gateway cloudie-assistant<br/>provider keys, logs, cost]
+  GW --> LLM[Anthropic / OpenAI / Google]
 ```
 
 A visitor's browser gets the prerendered page straight from Cloudflare's CDN, then the page calls `/api/hello`,
-which runs a Function in the data center nearest to them.
+which runs a Function in the data center nearest to them. Running the assistant (model, keys, knowledge base,
+HubSpot, costs) is in [The sales assistant](../guide/assistant.md).
 
 The chat page is embedded as an iframe in a gated HubSpot page, but its own URL is public, so the agent is only
 reachable through the guarded proxy:
@@ -71,7 +72,6 @@ The page's script policy is a `<meta>` Content-Security-Policy that SvelteKit wr
 | Middleware       | `_middleware.ts` runs before every Function: common headers, errors as JSON. WebSocket upgrades (101) pass through untouched                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Every Function request     | `backend/api/functions/_middleware.ts`                                             |
 | Chat proxy       | Pages Function on `/agents/*`: checks path, Origin, connect limit and Turnstile or `chat_pass`, then forwards to the agent Worker (see the flow above)                                                                                                                                                                                                                                                                                                                                                                                                                                    | Browsers (the chat page)   | `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts` |
 | AGENT binding    | Service binding from the Pages project to `cloudie-agent`: `fetch` for chat traffic and `GET /status` (KB version and model, shown by `/api/health`), RPC `allowConnect(ip)` for the connect limit                                                                                                                                                                                                                                                                                                                                                                                        | Pages Functions            | `backend/api/wrangler.toml` (`[[services]]`), `backend/api/functions/_lib/env.ts`  |
-| ALLOWED_ORIGINS  | Pages `[vars]` value: comma-separated origins allowed to open the chat. `http://localhost:5173` locally; production and preview values come from Terraform/wrangler per environment                                                                                                                                                                                                                                                                                                                                                                                                       | Chat proxy                 | `backend/api/wrangler.toml`                                                        |
 | Turnstile        | Cloudflare's bot check. The chat page sends the widget token as `?cf_turnstile=`; the proxy verifies it with siteverify (`https://challenges.cloudflare.com/turnstile/v0/siteverify`)                                                                                                                                                                                                                                                                                                                                                                                                     | Chat proxy                 | `backend/api/functions/_lib/guards.ts`                                             |
 | Secrets          | `TURNSTILE_SECRET` (Turnstile secret key) and `PASS_SECRET` (HMAC key for `chat_pass`) on the Pages project. Locally from `backend/api/.dev.vars` (Turnstile's always-pass test secret)                                                                                                                                                                                                                                                                                                                                                                                                   | Chat proxy                 | `./cli.sh set-secret`, `backend/api/.dev.vars.example`                             |
 | Agent Worker     | A separate Worker (`cloudie-agent`) hosting the `SalesAgent` Durable Object of the Cloudflare Agents SDK; routed under `/agents/*`. One Durable Object per chat, deleted 30 days after its last message. `workers_dev` and `preview_urls` are off, so it has no public address and is reached only through the AGENT binding (otherwise the proxy's guards could be bypassed)                                                                                                                                                                                                             | AGENT binding only         | `backend/agent/`                                                                   |
@@ -112,26 +112,30 @@ R2, so a rollback is setting `kbVersion` back (`./cli.sh ai-config`). `scripts/k
 
 ## Glossary
 
-| Term             | Meaning                                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Cloudflare Pages | Cloudflare's hosting for static sites plus Functions, deployed together with `wrangler pages deploy`             |
-| Pages Function   | A request handler (`onRequestGet`, `onRequestPost`, …) that runs on Cloudflare's Workers runtime                 |
-| workerd          | The open-source Workers runtime. Wrangler and the tests run it locally, so local behaviour matches production    |
-| Binding          | A named handle on `env` that gives a Function a resource (a D1 database, an R2 bucket, a KV namespace, a secret) |
-| Wrangler         | Cloudflare's CLI: local dev server, deploys, secrets, database migrations                                        |
-| Prerender        | Rendering a page to HTML at build time instead of per request                                                    |
-| Terraform state  | Terraform's record of the real resources it created, so it can tell what changed                                 |
-| Service binding  | A binding that lets one Worker (here the Pages Functions) call another Worker directly, without a public URL     |
-| RPC              | Calling a method of another Worker's `WorkerEntrypoint` class through a service binding, like a local function   |
-| Turnstile        | Cloudflare's CAPTCHA replacement; the page gets a token, the server checks it once with siteverify               |
-| chat_pass        | Cookie set by the proxy after a passed Turnstile check: `<expiry>.<HMAC-SHA256(PASS_SECRET, expiry)>`, 12 hours  |
-| Origin           | Browser-set request header naming the page that made the request; the proxy only accepts its own pages           |
+| Term             | Meaning                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare Pages | Cloudflare's hosting for static sites plus Functions, deployed together with `wrangler pages deploy`                |
+| Pages Function   | A request handler (`onRequestGet`, `onRequestPost`, …) that runs on Cloudflare's Workers runtime                    |
+| workerd          | The open-source Workers runtime. Wrangler and the tests run it locally, so local behaviour matches production       |
+| Binding          | A named handle on `env` that gives a Function a resource (a D1 database, an R2 bucket, a KV namespace, a secret)    |
+| Wrangler         | Cloudflare's CLI: local dev server, deploys, secrets, database migrations                                           |
+| Prerender        | Rendering a page to HTML at build time instead of per request                                                       |
+| Terraform state  | Terraform's record of the real resources it created, so it can tell what changed                                    |
+| Service binding  | A binding that lets one Worker (here the Pages Functions) call another Worker directly, without a public URL        |
+| RPC              | Calling a method of another Worker's `WorkerEntrypoint` class through a service binding, like a local function      |
+| Turnstile        | Cloudflare's CAPTCHA replacement; the page gets a token, the server checks it once with siteverify                  |
+| chat_pass        | Cookie set by the proxy after a passed Turnstile check: `<expiry>.<HMAC-SHA256(PASS_SECRET, expiry)>`, 12 hours     |
+| Origin           | Browser-set request header naming the page that made the request; the proxy only accepts its own pages              |
+| Durable Object   | A Worker class instance with its own storage (here SQLite) that one name always reaches: one per chat               |
+| KV               | Workers KV, a key-value store read at the edge; changes reach every location within about a minute                  |
+| AI Gateway       | Cloudflare's proxy for model APIs: logs, analytics, cost estimates, rate limits and stored provider keys            |
+| BYOK             | "Bring your own key": provider API keys stored in AI Gateway, which adds them to requests, so code never holds them |
 
 ## Who does what
 
 | Tool      | Owns                                                                                      |
 | --------- | ----------------------------------------------------------------------------------------- |
-| Terraform | The containers: Pages project, domains, DNS. Later databases, buckets, Access apps        |
+| Terraform | The containers: Pages project, domains, DNS, KV, R2, AI Gateway, Turnstile widget         |
 | Wrangler  | The contents: code deploys, secrets, bindings (from `wrangler.toml`), database migrations |
 
 Terraform ignores the Pages project's deployment settings (`ignore_changes`), so `wrangler.toml` stays the one

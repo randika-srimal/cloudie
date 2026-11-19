@@ -89,6 +89,9 @@ Merging to `main` publishes automatically (`.github/workflows/kb.yml`, once depl
 The assistant reads its config at most a minute later and loads the new version. `/api/health` shows the
 version in use.
 
+For the dev stack, `./cli.sh kb-publish-local` does the same into the local KV and R2 (`.wrangler/state`), with
+no account (`./cli.sh e2e` runs it before every run).
+
 ## Roll back
 
 Every published version stays in R2. Run `./cli.sh ai-config`, set `kbVersion` to the earlier version (the

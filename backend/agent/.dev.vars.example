@@ -1,4 +1,10 @@
-# Local-only secrets for `wrangler dev`. Copy to .dev.vars (ignored by Git).
+# Local-only secrets for `wrangler dev`. Copied to .dev.vars (ignored by Git) on first `pnpm dev`.
+# Production values: ./cli.sh set-agent-secret.
+
+# Answers "echo: <your message>" instead of calling a model: what the e2e chat test expects, and free.
+# To talk to a real model locally, remove it and set CF_AIG_TOKEN (or a provider key) below.
+MOCK_MODEL=echo
+
 # CF_AIG_TOKEN=
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
