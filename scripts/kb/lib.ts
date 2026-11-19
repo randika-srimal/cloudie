@@ -237,6 +237,22 @@ export function summaryOf(body: string): string {
   return para.replace(/\s*\n\s*/g, ' ').trim();
 }
 
+/** A result figure: a number with %, "per cent", "x" or a currency sign ("40%", "3x", "$2M", "12 per cent"). */
+const METRIC = /\d\s*(?:%|per\s*cent\b|percent\b|x\b|×)|[$£€]\s*\d|\d\s*[$£€]/i;
+
+/** Shown for a draft whose first paragraph is nothing but metrics. */
+export const DRAFT_SUMMARY_FALLBACK = 'Draft write-up; see its document for the scope of work.';
+
+/**
+ * The index Summary of a draft: the first paragraph left after `stripDraft`, minus every sentence holding a
+ * result figure (drafts' numbers are not client approved, and the index is read before the documents).
+ */
+export function draftSummaryOf(body: string): string {
+  const sentences = summaryOf(stripDraft(body)).split(/(?<=[.!?])\s+/);
+  const kept = sentences.filter((x) => x && !METRIC.test(x)).join(' ');
+  return kept || DRAFT_SUMMARY_FALLBACK;
+}
+
 const HEADING = /^(#{1,6})\s+(.*)$/;
 /** A line that is only bold text, used as a heading in the Google Docs exports ("**Results**"). */
 const BOLD_LINE = /^\*\*([^*]+?)\*\*:?\s*$/;
@@ -280,7 +296,10 @@ function indexBlock(s: CaseStudy, naming: string): string {
     `HubSpot licensing: ${m.hubs.join(', ') || 'Not recorded'}`,
   ];
   if (m.migration_from.length) lines.push(`Migrated from: ${m.migration_from.join(', ')}`);
-  lines.push(`Link: ${m.url ?? 'none published'}`, `Summary: ${summaryOf(s.body)}`);
+  lines.push(
+    `Link: ${m.url ?? 'none published'}`,
+    `Summary: ${m.status === 'draft' ? draftSummaryOf(s.body) : summaryOf(s.body)}`,
+  );
   return lines.join('\n');
 }
 
@@ -346,15 +365,22 @@ export const nameRegExp = (name: string, flags = 'iu'): RegExp =>
     flags,
   );
 
-/** Unicode NFKD with accents removed, so "Baillié" reads as "Baillie". */
-export const foldAccents = (s: string): string => s.normalize('NFKD').replace(/\p{M}+/gu, '');
+/**
+ * Unicode NFKD with accents removed, so "Baillié" reads as "Baillie", and invisible characters (zero-width
+ * spaces and joiners, word joiner, BOM, soft hyphen) dropped, so they cannot split a name.
+ */
+export const foldAccents = (s: string): string =>
+  s
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, '');
 
 /**
  * What may sit between the words of a restricted name and still spell it: nothing ("HardRock"), spaces,
- * hyphens ("hard-rock-stadium", a slug), underscores, dots, slashes, markdown emphasis ("**Hard** Rock"),
- * and "&" or "and" ("Kraft & Heinz").
+ * hyphens and every other Unicode dash ("hard-rock-stadium", "Hard–Rock"), underscores, dots, commas,
+ * slashes, markdown emphasis ("**Hard** Rock"), and "&" or "and" ("Kraft & Heinz").
  */
-const NAME_GAP = '(?:[\\s\\-_.*`~/]|&|and)*';
+const NAME_GAP = '(?:[\\s\\p{Pd}_.,*`~/]|&|and)*';
 
 /**
  * Matches `name` the way the confidentiality check needs: case-insensitive, accent-insensitive (test it

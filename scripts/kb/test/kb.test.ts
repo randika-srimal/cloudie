@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildKb } from '../build.ts';
 import { checkKb } from '../check.ts';
-import { parseCaseStudy } from '../lib.ts';
+import { DRAFT_SUMMARY_FALLBACK, foldAccents, parseCaseStudy } from '../lib.ts';
 
 const FIXTURES = join(import.meta.dirname, 'fixtures', 'kb');
 
@@ -144,6 +144,12 @@ describe('checkKb', () => {
     ['accented', 'Glöbéx Corporation'],
     ['in a slug', 'see /case-studies/globex-corporation-wins'],
     ['in code', '`globex corporation`'],
+    ['with an en dash', 'Globex\u2013Corporation'],
+    ['with an em dash', 'Globex \u2014 Corporation'],
+    ['with a comma', 'Globex, Corporation'],
+    ['split by a zero-width space', 'Glo\u200Bbex Corporation'],
+    ['split by a soft hyphen', 'Globex Corpo\u00ADration'],
+    ['split by a zero-width joiner', 'Globex\u200DCorporation'],
   ])('reports a restricted name written %s', (_, written) => {
     removePlant();
     edit('acme-retail.md', (t) => `${t}\nPartner: ${written}.\n`);
@@ -300,8 +306,45 @@ describe('buildKb', () => {
     for (const kept of ['Four people.', 'Thanks.']) expect(hooli).toContain(kept);
   });
 
+  /** The index Summary line of `slug` in a fresh build. */
+  const summaryLine = (slug: string) => {
+    const prompt = read(buildKb(dir, out).version, 'prompt.md');
+    const index = prompt.slice(0, prompt.indexOf('</case_study_index>'));
+    const block = index.slice(index.indexOf(`**${slug}**`));
+    return block.split('\n').find((l) => l.startsWith('Summary: ')) ?? '';
+  };
+
+  it('keeps result figures out of a draft index Summary', () => {
+    edit('hooli.md', (t) =>
+      t.replace(
+        'Hooli rebuilt its sales process on Sales Hub Enterprise.',
+        'Hooli rebuilt its sales process on Sales Hub Enterprise across 3 regions. Win rates rose 40%. ' +
+          'Saved $2M a year! Pipeline grew 3x. Churn fell 12 per cent. Twelve users trained.',
+      ),
+    );
+    const line = summaryLine('Hooli');
+    expect(line).toBe(
+      'Summary: Hooli rebuilt its sales process on Sales Hub Enterprise across 3 regions. Twelve users trained.',
+    );
+  });
+
+  it('uses a neutral draft Summary when the first paragraph is all figures, or a stripped section', () => {
+    edit('hooli.md', (t) =>
+      t.replace('Hooli rebuilt its sales process on Sales Hub Enterprise.', 'Revenue up 40%.'),
+    );
+    expect(summaryLine('Hooli')).toBe(`Summary: ${DRAFT_SUMMARY_FALLBACK}`);
+    edit('hooli.md', (t) => t.replace('Revenue up 40%.', '**Results**\n\nUp 9x.'));
+    expect(summaryLine('Hooli')).not.toContain('9x');
+  });
+
   it('refuses to build when the check has errors', () => {
     edit('hooli.md', (t) => t + '\nInitech again.\n');
     expect(() => buildKb(dir, out)).toThrow(/Initech/);
+  });
+});
+
+describe('foldAccents', () => {
+  it('drops accents and invisible characters', () => {
+    expect(foldAccents('Bai\u00ADll\u200Bi\u00E9\uFEFF\u2060')).toBe('Baillie');
   });
 });

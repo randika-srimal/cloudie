@@ -27,8 +27,9 @@ A visitor's browser gets the prerendered page straight from Cloudflare's CDN, th
 which runs a Function in the data center nearest to them. Running the assistant (model, keys, knowledge base,
 HubSpot, costs) is in [The sales assistant](../guide/assistant.md).
 
-The chat page is embedded as an iframe in a gated HubSpot page, but its own URL is public, so the agent is only
-reachable through the guarded proxy:
+The chat page is embedded as an iframe in a gated HubSpot page, but its own URL is public, and so is the
+assistant: see [Who can use the chat](#who-can-use-the-chat). The agent Worker itself is only reachable through
+this proxy:
 
 ```mermaid
 flowchart TD
@@ -36,9 +37,11 @@ flowchart TD
   P -->|no| E404[404]
   P -->|yes| O{Origin in ALLOWED_ORIGINS?<br/>or no Origin and Sec-Fetch-Site: same-origin}
   O -->|no| E403[403 Forbidden]
-  O -->|yes| L{"AGENT.allowConnect(cf-connecting-ip)<br/>CONNECT_LIMIT: 10 per minute"}
+  O -->|yes| U{"Upgrade: websocket?"}
+  U -->|no| C{Valid chat_pass cookie?}
+  U -->|yes| L{"AGENT.allowConnect(cf-connecting-ip)<br/>CONNECT_LIMIT: 10 per minute"}
   L -->|no| E429[429 Too many connections]
-  L -->|yes| C{Valid chat_pass cookie?}
+  L -->|yes| C
   C -->|yes| F[Forward to AGENT.fetch]
   C -->|no| V{"?cf_turnstile= passes siteverify?"}
   V -->|no| E401[401 Verification required]
@@ -46,18 +49,43 @@ flowchart TD
 ```
 
 Every request under the path goes through these checks: the WebSocket upgrade and the Agents SDK's HTTP GET and
-POST calls alike. The `cf_turnstile` token is removed from the URL and the `Cookie` header is dropped before the
+POST calls alike, except that only WebSocket upgrades count against the connect limit (the page's
+`get-messages` GET on every load would otherwise lock out an office sharing one NAT address). The `cf_turnstile` token is removed from the URL and the `Cookie` header is dropped before the
 request reaches the agent; the rest of the request, including `cf-connecting-ip` (which Cloudflare sets itself,
 so clients cannot choose it), is forwarded unchanged so the agent's per-IP message limit works.
 
 How the chat page connects:
 
-| Step    | What happens                                                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Chat id | `crypto.randomUUID()` kept in `sessionStorage` (`chat-session`): one conversation per tab; a reload keeps it, "New chat" clears it                                                                     |
-| Connect | Agents SDK `AgentClient` (a reconnecting WebSocket) with the SDK's `WebSocketChatTransport` under the AI SDK's Svelte `Chat`. Every connect attempt, reconnects included, runs a fresh Turnstile check |
-| State   | The agent pushes `AgentState` (`kbVersion`, `allowlist`) on connect; the page renders links against that allowlist                                                                                     |
-| History | After the first successful connect the page GETs `/agents/sales-agent/<id>/get-messages` with the `chat_pass` cookie only (no token). Without the cookie (Safari) it gets 401 and starts empty         |
+| Step    | What happens                                                                                                                                                                                                                                                                                                                                              |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat id | `crypto.randomUUID()` kept in `sessionStorage` (`chat-session`): one conversation per tab; a reload keeps it, "New chat" clears it                                                                                                                                                                                                                        |
+| Connect | Agents SDK `AgentClient` (a reconnecting WebSocket) with the SDK's `WebSocketChatTransport` under the AI SDK's Svelte `Chat`. Every connect attempt, reconnects included, runs a fresh Turnstile check. Reconnecting stops after 8 attempts (then the page shows a Reconnect button) and pauses while the tab is hidden (`web/src/lib/chat/reconnect.ts`) |
+| State   | The agent pushes `AgentState` (`kbVersion`, `allowlist`) on connect; the page renders links against that allowlist                                                                                                                                                                                                                                        |
+| History | After the first successful connect the page GETs `/agents/sales-agent/<id>/get-messages` with the `chat_pass` cookie only (no token). Without the cookie (Safari) it gets 401 and starts empty                                                                                                                                                            |
+
+### Who can use the chat
+
+Anyone with a browser who has the chat page's URL can use the assistant. None of the checks above identifies a
+HubSpot user:
+
+| Check             | What it really does                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Origin            | Must be the chat page's own origin. Opening `/chat` directly sends exactly that, so it only stops other websites from scripting the agent |
+| `frame-ancestors` | Limits which pages may frame `/chat`; it does nothing when `/chat` is opened directly                                                     |
+| Turnstile         | Stops bots and scripts, not people: any human passes it                                                                                   |
+| `chat_pass`       | A 12-hour bearer pass: whoever holds the cookie value can connect without Turnstile until it expires                                      |
+| Rate limits       | 10 WebSocket connects and 20 messages per minute per IP, plus the AI Gateway's 300 requests per 60 s: they cap cost, not who can ask      |
+
+So the real gate is Turnstile plus the rate limits, and everything in the uploaded knowledge base (every
+document in `prompt.md`, drafts included after stripping) can be extracted by such a person by asking for it.
+`GET /api/health` is public too and reports the live `model` and `kbVersion`.
+
+**Decision for the owner:** to limit the chat to signed-in staff, put
+[Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) in front of `/chat` and
+`/agents/*` (an identity login; test it inside the HubSpot iframe, where browsers may block its cookie), or have
+the HubSpot page pass a short-lived token signed with a shared secret that the proxy checks before Turnstile.
+Neither is built. Separately, `frame-ancestors` should be narrowed to the real HubSpot page origin
+(**TODO(user)** in `web/static/_headers`, see [Embed in HubSpot](../guide/assistant.md#embed-in-hubspot)).
 
 The page's script policy is a `<meta>` Content-Security-Policy that SvelteKit writes at build time (`csp` in
 `web/vite.config.ts`, with the hash of its inline start-up script); `frame-ancestors`, `frame-src`, `connect-src`,
@@ -70,7 +98,7 @@ The page's script policy is a `<meta>` Content-Security-Policy that SvelteKit wr
 | Chat page        | `/chat`, prerendered like every page. Runs a Turnstile check (sitekey `PUBLIC_TURNSTILE_SITEKEY`, declared in `web/src/env.ts` and inlined at build time; outside production builds it defaults to Turnstile's always-pass test key, and a production build fails without it), then opens the agent WebSocket with `?cf_turnstile=<token>` and renders replies as sanitised markdown (a markdown-only tag list: no images, forms or style attributes). Links not on the agent's allowlist (its state) become plain text. HubSpot may frame it: `frame-ancestors` in `web/static/_headers` | Browsers (HubSpot iframe)  | `web/src/routes/chat/`, `web/src/lib/chat/`                                        |
 | Pages Functions  | TypeScript files in `backend/api/functions/`; the file path is the route (`api/hello.ts` → `/api/hello`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Browsers                   | `backend/api/functions/`                                                           |
 | Middleware       | `_middleware.ts` runs before every Function: common headers, errors as JSON. WebSocket upgrades (101) pass through untouched                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Every Function request     | `backend/api/functions/_middleware.ts`                                             |
-| Chat proxy       | Pages Function on `/agents/*`: checks path, Origin, connect limit and Turnstile or `chat_pass`, then forwards to the agent Worker (see the flow above)                                                                                                                                                                                                                                                                                                                                                                                                                                    | Browsers (the chat page)   | `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts` |
+| Chat proxy       | Pages Function on `/agents/*`: checks path, Origin, connect limit (WebSocket upgrades) and Turnstile or `chat_pass`, then forwards to the agent Worker (see the flow above)                                                                                                                                                                                                                                                                                                                                                                                                               | Browsers (the chat page)   | `backend/api/functions/agents/[[path]].ts`, `backend/api/functions/_lib/guards.ts` |
 | AGENT binding    | Service binding from the Pages project to `cloudie-agent`: `fetch` for chat traffic and `GET /status` (KB version and model, shown by `/api/health`), RPC `allowConnect(ip)` for the connect limit                                                                                                                                                                                                                                                                                                                                                                                        | Pages Functions            | `backend/api/wrangler.toml` (`[[services]]`), `backend/api/functions/_lib/env.ts`  |
 | Turnstile        | Cloudflare's bot check. The chat page sends the widget token as `?cf_turnstile=`; the proxy verifies it with siteverify (`https://challenges.cloudflare.com/turnstile/v0/siteverify`)                                                                                                                                                                                                                                                                                                                                                                                                     | Chat proxy                 | `backend/api/functions/_lib/guards.ts`                                             |
 | Secrets          | `TURNSTILE_SECRET` (Turnstile secret key) and `PASS_SECRET` (HMAC key for `chat_pass`) on the Pages project. Locally from `backend/api/.dev.vars` (Turnstile's always-pass test secret)                                                                                                                                                                                                                                                                                                                                                                                                   | Chat proxy                 | `./cli.sh set-secret`, `backend/api/.dev.vars.example`                             |
@@ -104,11 +132,12 @@ flowchart LR
 ```
 
 The build drops `excluded` and `never_disclose` files, strips results, metrics and quotes from `draft` files,
-and generates the case study index from the frontmatter. Anonymous files are uploaded under `display_name` only.
+and generates the case study index from the frontmatter (a draft's index Summary also loses every sentence with
+a result figure: a number with %, "per cent", "x" or a currency sign). Anonymous files are uploaded under `display_name` only.
 The check fails when a never-disclose name, or an anonymous client's real name, appears in anything that would
 be uploaded. The version is the first 12 hex characters of the SHA-256 of the bundle, and every version stays in
 R2, so a rollback is setting `kbVersion` back (`./cli.sh ai-config`). `scripts/kb/publish.sh` runs on a merge to
-`main` that touches `knowledge/` (`.github/workflows/kb.yml`) or from `./cli.sh kb-publish`.
+`main` that touches `knowledge/` or `scripts/kb/` (`.github/workflows/kb.yml`) or from `./cli.sh kb-publish`.
 
 ## Glossary
 

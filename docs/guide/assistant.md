@@ -84,10 +84,10 @@ Add an HTML or embed module to the gated HubSpot page with:
 
 `<domain>` is the Pages address (`cloudie.pages.dev`) or a custom domain. Two settings must name the HubSpot page:
 
-| Setting                                | Why                                                                | Where                        |
-| -------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
-| `frame-ancestors` in the `/chat` CSP   | The browser refuses to show the page in a frame from anywhere else | `web/static/_headers`        |
-| `hubspot_domains` (Terraform variable) | The Turnstile widget runs only on hostnames it lists               | `backend/infra/variables.tf` |
+| Setting                                | Why                                                                                                                   | Where                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `frame-ancestors` in the `/chat` CSP   | The browser refuses to show the page in a frame from anywhere else (it does not stop anyone opening `/chat` directly) | `web/static/_headers`        |
+| `hubspot_domains` (Terraform variable) | The Turnstile widget runs only on hostnames it lists                                                                  | `backend/infra/variables.tf` |
 
 `ALLOWED_ORIGINS` stays the chat page's own address, never HubSpot's: inside the iframe the WebSocket's `Origin`
 is the chat page's.
@@ -95,6 +95,18 @@ is the chat page's.
 **TODO(user):** `frame-ancestors` currently allows `https://www.engaging.io`, `https://*.engaging.io`,
 `https://*.hubspot.com` and `https://*.hs-sites.com`. Confirm the HubSpot page's real origin and narrow the list
 to it.
+
+### Who can reach it
+
+The HubSpot page is gated; the chat is not. Anyone who has the `/chat` URL can open it directly, pass Turnstile
+(it stops bots, not people) and chat, and can get the knowledge base's content out of the assistant by asking.
+A passed check leaves a `chat_pass` cookie that works as a 12-hour bearer pass. The rate limits (10 connects and
+20 messages per minute per IP) cap cost, not access, and `GET /api/health` publicly shows the live `model` and
+`kbVersion`.
+
+**Decision for the owner:** keep it as it is (anything in `knowledge/` must then be fine for any visitor to read),
+or restrict it, with Cloudflare Access on `/chat` and `/agents/*` or a token the HubSpot page signs and the proxy
+checks. Details in [Architecture → Who can use the chat](../architecture/overview.md#who-can-use-the-chat).
 
 ## Costs
 
