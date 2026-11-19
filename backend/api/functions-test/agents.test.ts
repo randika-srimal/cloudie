@@ -163,20 +163,49 @@ describe('/agents proxy guards', () => {
     ).toBe(401);
   });
 
-  it('answers 429 on the 11th connect in a minute from one IP, before verification', async () => {
+  it('answers 429 on the 11th WebSocket connect in a minute from one IP, before verification', async () => {
     const cookie = await passCookie();
+    const upgrade = { Upgrade: 'websocket' };
     const statuses: number[] = [];
     for (let i = 0; i < 11; i++) {
       const res = await proxy(
-        context('/agents/sales-agent/s1', { ip: '10.5.0.1', headers: { Cookie: cookie } }),
+        context('/agents/sales-agent/s1', {
+          ip: '10.5.0.1',
+          headers: { ...upgrade, Cookie: cookie },
+        }),
       );
       statuses.push(res.status);
     }
     expect(statuses.slice(0, 10)).toEqual(Array(10).fill(200));
     expect(statuses[10]).toBe(429);
-    const res = await proxy(context('/agents/sales-agent/s1', { ip: '10.5.0.1' }));
+    const res = await proxy(
+      context('/agents/sales-agent/s1', { ip: '10.5.0.1', headers: upgrade }),
+    );
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: 'Too many connections' });
+  });
+
+  it('does not count plain HTTP requests (get-messages) against the connect limit', async () => {
+    const cookie = await passCookie();
+    for (let i = 0; i < 15; i++) {
+      const res = await proxy(
+        context('/agents/sales-agent/s1/get-messages', {
+          ip: '10.5.0.2',
+          headers: { Cookie: cookie },
+        }),
+      );
+      expect(res.status).toBe(200);
+    }
+    const ws = await proxy(
+      context('/agents/sales-agent/s1', {
+        ip: '10.5.0.2',
+        headers: { Upgrade: 'websocket', Cookie: cookie },
+      }),
+    );
+    expect(ws.status).toBe(200);
+    // Still verified: an uncounted request without a pass or token is refused.
+    const bare = await proxy(context('/agents/sales-agent/s1/get-messages', { ip: '10.5.0.2' }));
+    expect(bare.status).toBe(401);
   });
 
   it('rebuilds a 101 upgrade with the WebSocket and adds the cookie', async () => {

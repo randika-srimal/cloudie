@@ -1,6 +1,7 @@
 // /agents/*: the guarded proxy from the chat page to the agent Worker (cloudie-agent, the AGENT service
 // binding). The chat page's URL is public, so every request (WebSocket upgrade, or the Agents SDK's HTTP
-// GET/POST) must pass, in order: path, Origin, connect limit, then a chat_pass cookie or a Turnstile token.
+// GET/POST) must pass, in order: path, Origin, connect limit (WebSocket upgrades only), then a chat_pass
+// cookie or a Turnstile token.
 import type { Env } from '../_lib/env.ts';
 import {
   checkOrigin,
@@ -31,9 +32,12 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   const origins = parseOrigins(env.ALLOWED_ORIGINS);
   if (!checkOrigin(request, origins)) return error(403, 'Forbidden');
 
-  // Cloudflare sets cf-connecting-ip itself in production, so clients cannot choose their key.
+  // Cloudflare sets cf-connecting-ip itself in production, so clients cannot choose their key. Only WebSocket
+  // upgrades count against the connect limit: the SDK's plain GETs (get-messages on every page load) would
+  // otherwise lock out an office behind one shared NAT address. They still need a pass or token below.
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  if (!(await env.AGENT.allowConnect(ip))) return error(429, 'Too many connections');
+  const upgrade = request.headers.get('Upgrade')?.toLowerCase() === 'websocket';
+  if (upgrade && !(await env.AGENT.allowConnect(ip))) return error(429, 'Too many connections');
 
   const now = Date.now();
   const token = url.searchParams.get('cf_turnstile');

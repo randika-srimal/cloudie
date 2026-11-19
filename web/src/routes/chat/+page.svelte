@@ -174,6 +174,13 @@
         We couldn't verify your browser.
         <button type="button" class="underline" onclick={start}>Try again</button>
       </p>
+    {:else if handle?.connection.gaveUp}
+      <p class="mb-2 text-sm text-red-600" role="alert">
+        The connection was lost.
+        <button type="button" class="underline" onclick={() => handle?.reconnect()}>
+          Reconnect
+        </button>
+      </p>
     {:else if connecting}
       <p class="mb-2 text-xs text-muted" aria-live="polite">
         {handle?.connection.everOpened ? 'Reconnecting…' : 'Connecting…'}

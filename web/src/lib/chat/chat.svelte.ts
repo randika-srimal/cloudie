@@ -6,6 +6,7 @@ import { AgentState } from '@cloudie/protocol';
 import type { UIMessage } from 'ai';
 import { WebSocketChatTransport } from 'agents/chat/transport';
 import { AgentClient } from 'agents/client';
+import { createReconnectPolicy, MAX_RETRIES } from './reconnect.ts';
 import { sessionId } from './session.ts';
 
 export interface ChatOptions {
@@ -23,8 +24,13 @@ export interface ChatHandle {
   chat: Chat;
   /** The agent's latest state; null until the first state message. */
   state: { current: AgentState | null };
-  /** `open` is true while the WebSocket is connected; `everOpened` tells a first connect from a reconnect. */
-  connection: { open: boolean; everOpened: boolean };
+  /**
+   * `open` is true while the WebSocket is connected; `everOpened` tells a first connect from a reconnect;
+   * `gaveUp` is true once reconnecting stopped (MAX_RETRIES spent): the page offers `reconnect`.
+   */
+  connection: { open: boolean; everOpened: boolean; gaveUp: boolean };
+  /** Starts connecting again after the socket gave up. */
+  reconnect: () => void;
   close: () => void;
 }
 
@@ -34,7 +40,8 @@ type AgentFrame = { type?: unknown; messages?: unknown };
 export function createChat(opts: ChatOptions): ChatHandle {
   const id = sessionId();
   const state = $state<{ current: AgentState | null }>({ current: null });
-  const connection = $state({ open: false, everOpened: false });
+  const connection = $state({ open: false, everOpened: false, gaveUp: false });
+  const policy = createReconnectPolicy(() => document.hidden);
 
   let firstToken: string | null = opts.turnstileToken;
   const agent = new AgentClient({
@@ -49,6 +56,12 @@ export function createChat(opts: ChatOptions): ChatHandle {
       firstToken = null;
       return { cf_turnstile: token };
     },
+    maxRetries: MAX_RETRIES,
+    shouldReconnectOnClose: () => policy.shouldReconnectOnClose(),
+    onConnectionError: () => {
+      policy.onConnectionError();
+      connection.gaveUp = policy.gaveUp;
+    },
     onStateUpdate: (next: unknown) => {
       const parsed = AgentState.safeParse(next);
       if (parsed.success) state.current = parsed.data;
@@ -62,6 +75,8 @@ export function createChat(opts: ChatOptions): ChatHandle {
     const first = !connection.everOpened;
     connection.open = true;
     connection.everOpened = true;
+    policy.onOpen();
+    connection.gaveUp = false;
     if (first) void loadHistory();
   });
   agent.addEventListener('close', () => {
@@ -103,5 +118,22 @@ export function createChat(opts: ChatOptions): ChatHandle {
     }
   }
 
-  return { chat, state, connection, close: () => agent.close() };
+  // Reconnecting pauses while the tab is hidden (see reconnect.ts); pick it up again when it is shown.
+  const onVisibility = () => {
+    if (!document.hidden && policy.onVisible()) agent.reconnect();
+  };
+  document.addEventListener('visibilitychange', onVisibility);
+
+  function reconnect(): void {
+    policy.retry();
+    connection.gaveUp = false;
+    agent.reconnect();
+  }
+
+  function close(): void {
+    document.removeEventListener('visibilitychange', onVisibility);
+    agent.close();
+  }
+
+  return { chat, state, connection, reconnect, close };
 }
