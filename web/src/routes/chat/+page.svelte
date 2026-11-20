@@ -5,8 +5,8 @@
 <script lang="ts">
   import { PUBLIC_TURNSTILE_SITEKEY } from '$app/env/public';
   import { onDestroy, onMount, tick } from 'svelte';
-  import type { UIMessage } from 'ai';
   import { createChat, type ChatHandle } from '#lib/chat/chat.svelte.ts';
+  import { showThinking, textOf, usingTool, visibleMessages } from '#lib/chat/messages.ts';
   import { renderReply } from '#lib/chat/render.ts';
   import { clearSession } from '#lib/chat/session.ts';
   import Turnstile from '#lib/chat/Turnstile.svelte';
@@ -27,6 +27,8 @@
   const allowlist = $derived(handle?.state.current?.allowlist ?? []);
   const connecting = $derived(!handle || !handle.connection.open);
   const canSend = $derived(!!chat && !busy && input.trim().length > 0);
+  const shown = $derived(visibleMessages(chat?.messages ?? []));
+  const thinking = $derived(showThinking(chat?.messages ?? [], status));
 
   async function start(): Promise<void> {
     verifyFailed = false;
@@ -67,21 +69,6 @@
   function newChat(): void {
     clearSession();
     location.reload();
-  }
-
-  function textOf(message: UIMessage): string {
-    return message.parts.map((p) => (p.type === 'text' ? p.text : '')).join('');
-  }
-
-  /** True while the assistant is running a tool (reading a web page) and has not finished it. */
-  function usingTool(message: UIMessage): boolean {
-    return message.parts.some(
-      (p) =>
-        (p.type.startsWith('tool-') || p.type === 'dynamic-tool') &&
-        'state' in p &&
-        p.state !== 'output-available' &&
-        p.state !== 'output-error',
-    );
   }
 
   // Keep the newest message in view while a reply streams in.
@@ -172,7 +159,7 @@
       </div>
     {/if}
 
-    {#each chat?.messages ?? [] as message (message.id)}
+    {#each shown as message (message.id)}
       {#if message.role === 'user'}
         <div class="bubble-in flex justify-end">
           <p
@@ -213,7 +200,7 @@
       {/if}
     {/each}
 
-    {#if status === 'submitted'}
+    {#if thinking}
       <div class="bubble-in flex items-end gap-2">
         <span
           class="mb-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand text-sm leading-none font-bold text-white"
