@@ -4,12 +4,12 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# The chat page. It is the whole page now (info.engaging.io/eio-sales-assistant redirects here), not a HubSpot
+# The chat page (the home page). It is the whole page now (info.engaging.io/eio-sales-assistant redirects here), not a HubSpot
 # iframe: its password cookie (chat_access, SameSite=Lax) would not be sent inside another site's frame, so no
 # one may frame it. Turnstile runs in a frame from challenges.cloudflare.com; the chat WebSocket, history GET and
 # /api/access go to this site only; no remote images or form posts. script-src (with the hash of SvelteKit's
 # inline start-up script) is the <meta> CSP from `csp` in web/vite.config.ts.
-/chat
+/
   Content-Security-Policy: frame-ancestors 'none'; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; form-action 'none'
 
 # Hashed build files never change: cache them for a year

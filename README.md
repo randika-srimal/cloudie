@@ -1,6 +1,7 @@
 # Engaging Assistant
 
-Engaging's **sales assistant** on Cloudflare: a chat page (`/chat`) that HubSpot embeds, answering sales reps'
+Engaging's **sales assistant** on Cloudflare: a password-protected chat page (the site's home page) that replaces the HubSpot
+sales-assistant page, answering sales reps'
 questions from a case-study knowledge base through a model behind AI Gateway. Built on the Cloudie starter for
 **Cloudflare Pages** projects, with the tooling a real project needs from day one:
 
@@ -16,7 +17,7 @@ questions from a case-study knowledge base through a model behind AI Gateway. Bu
 ## Start
 
 ```bash
-./cli.sh up      # site http://localhost:5173 (chat at /chat) · API http://localhost:8788/api/hello · docs http://localhost:3000
+./cli.sh up      # chat http://localhost:5173 · API http://localhost:8788/api/health · docs http://localhost:3000
 ./cli.sh kb-publish-local   # give the local assistant a knowledge base (it answers "echo: …" locally)
 ./cli.sh         # the project menu
 ```
@@ -48,7 +49,7 @@ cli.sh                  entry point (host side)
 scripts/                cli.sh (gum menu), tf.sh, tokens.sh, rename.sh, docs-serve.mjs, kb/ (knowledge base check, build, publish)
 docker/                 Dockerfile.dev, dev-entrypoint.sh
 docker-compose.yml      app, docs, e2e
-web/                    SvelteKit site, incl. the chat page (src/routes/chat)
+web/                    SvelteKit site: the chat page is the home page (src/routes/+page.svelte)
 backend/api/            Pages Functions + wrangler.toml
 backend/agent/          the agent Worker + its wrangler.toml
 knowledge/              the assistant's knowledge base

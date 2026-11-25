@@ -1,0 +1,4 @@
+# Cloudflare Pages redirects (https://developers.cloudflare.com/pages/configuration/redirects/).
+# The chat used to live at /chat; it is the home page now. Old links and bookmarks keep working.
+/chat   /  301
+/chat/  /  301

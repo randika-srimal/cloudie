@@ -35,7 +35,7 @@ in_app() {
 case "${1:-}" in
   up)
     docker compose up -d
-    step "Site http://localhost:5173  ·  API http://localhost:8788/api/hello  ·  Docs http://localhost:3000" ;;
+    step "Chat http://localhost:5173  ·  API http://localhost:8788/api/health  ·  Docs http://localhost:3000" ;;
   down) docker compose down ;;
   logs-dev) docker compose logs -f app ;;
   e2e)

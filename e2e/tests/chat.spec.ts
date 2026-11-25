@@ -23,14 +23,14 @@ async function waitForConnection(page: Page): Promise<void> {
 }
 
 test('a wrong password is refused and the chat stays locked', async ({ page }) => {
-  await page.goto('/chat');
+  await page.goto('/');
   await enterPassword(page, 'not-the-password');
   await expect(page.getByRole('alert')).toHaveText(/not right/);
   await expect(page.getByLabel('Your message')).toBeHidden();
 });
 
 test('a message gets a streamed reply that survives a reload', async ({ page }) => {
-  await page.goto('/chat');
+  await page.goto('/');
   await enterPassword(page);
   await waitForConnection(page);
 

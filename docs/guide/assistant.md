@@ -1,6 +1,6 @@
 # The sales assistant
 
-A password-protected chat page (`/chat`) for Engaging's sales reps, replacing the HubSpot page
+A password-protected chat page (the home page, `/`) for Engaging's sales reps, replacing the HubSpot page
 `info.engaging.io/eio-sales-assistant`. It answers questions about Engaging's services and case studies from a
 knowledge base in `knowledge/`, through a model behind Cloudflare AI Gateway.
 How the pieces connect is in [Architecture and resources](../architecture/overview.md); this page is how to run
@@ -74,7 +74,7 @@ Git too, or the next merge publishes it again. A code rollback is separate: see
 
 ## The page and its password
 
-`/chat` is a copy of the HubSpot page it replaces, `info.engaging.io/eio-sales-assistant`: the same dark layout,
+The home page is a copy of the HubSpot page it replaces, `info.engaging.io/eio-sales-assistant`: the same dark layout,
 fonts (Atkinson Hyperlegible Next, JetBrains Mono), suggestion buttons, "Searching my knowledge" indicator and
 awards footer. Like that page it asks for one shared password first.
 
@@ -116,7 +116,7 @@ then have HubSpot redirect the old URL to it. HubSpot keeps serving the rest of 
 
 ```mermaid
 flowchart LR
-  U[Sales rep's bookmark<br/>info.engaging.io/eio-sales-assistant] -->|HubSpot URL redirect, 301| N[assistant.engaging.io/chat]
+  U[Sales rep's bookmark<br/>info.engaging.io/eio-sales-assistant] -->|HubSpot URL redirect, 301| N[assistant.engaging.io]
   N -->|proxied CNAME| P[Pages project engaging-assistant]
 ```
 
@@ -126,10 +126,10 @@ flowchart LR
    (**Workers & Pages → engaging-assistant → Custom domains**). Then `./cli.sh deploy`: its Terraform step creates the
    `cloudflare_pages_domain` and the proxied CNAME, and `infra-write-config` adds the new origin to production
    `ALLOWED_ORIGINS` (commit `backend/api/wrangler.toml`). Turnstile picks the domain up from the same variable.
-2. **Check it.** Open `https://assistant.engaging.io/chat` once the certificate is issued (a few minutes), enter the
+2. **Check it.** Open `https://assistant.engaging.io` once the certificate is issued (a few minutes), enter the
    password and ask a question.
 3. **Redirect in HubSpot.** In HubSpot, **Settings → Content → Domains & URLs → URL Redirects → Add URL redirect**:
-   original URL `info.engaging.io/eio-sales-assistant`, destination `https://assistant.engaging.io/chat`,
+   original URL `info.engaging.io/eio-sales-assistant`, destination `https://assistant.engaging.io/`,
    permanent (301). A redirect does not apply while a live page has the same URL, so first unpublish (or archive)
    the old page in **Content → Website Pages**, or tick the redirect's option to apply even when a page exists.
 4. **Test the old URL** in a private window: it should land on the new password view.

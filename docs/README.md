@@ -1,8 +1,8 @@
 # Engaging Assistant
 
-A starter for projects that run on **Cloudflare Pages**.
-Out of the box it is a hello-world page and one API route, wired end to end: the same layout, tooling and
-project CLI as Morse, with nothing project-specific left in.
+Engaging's sales assistant on **Cloudflare Pages**: a password-protected chat page (the site's home page) that
+answers sales reps' questions from a case-study knowledge base. Built on the Cloudie starter, with the same
+layout, tooling and project CLI as Morse.
 
 | Part           | What it is                                                                                   | Where                                   |
 | -------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -32,7 +32,7 @@ all run in containers.
 ./cli.sh up
 ```
 
-Then open <http://localhost:5173> (the site), <http://localhost:8788/api/hello> (the API) and
+Then open <http://localhost:5173> (the chat), <http://localhost:8788/api/health> (the API) and
 <http://localhost:3000> (these docs). `./cli.sh` with no arguments opens the menu.
 
 ## Versions
