@@ -81,6 +81,51 @@ describe('resolveModel', () => {
     expect(calls[0]?.headers.get('cf-aig-authorization')).toBe('Bearer tok');
   });
 
+  // AI Gateway adds a stored (BYOK) key only when the request has no provider auth header of its own; any
+  // value there, even a placeholder, is forwarded and the provider rejects it ("invalid x-api-key").
+  it.each([
+    ['anthropic', DEFAULT_CONFIG, 'x-api-key', { ANTHROPIC_API_KEY: 'own' }, 'own'],
+    [
+      'openai',
+      { ...DEFAULT_CONFIG, provider: 'openai', model: 'gpt-5' },
+      'authorization',
+      { OPENAI_API_KEY: 'own' },
+      'Bearer own',
+    ],
+    [
+      'google',
+      { ...DEFAULT_CONFIG, provider: 'google', model: 'gemini-3-pro' },
+      'x-goog-api-key',
+      { GOOGLE_API_KEY: 'own' },
+      'own',
+    ],
+  ] as const)(
+    'sends no %s key header when the gateway holds the key, and the own key otherwise',
+    async (_n, config, header, keys, expected) => {
+      const seen: (string | null)[] = [];
+      const orig = globalThis.fetch;
+      globalThis.fetch = ((_input: Request | string | URL, init?: RequestInit) => {
+        seen.push(new Headers(init?.headers).get(header));
+        return Promise.resolve(new Response('{}', { status: 500 }));
+      }) as typeof fetch;
+      try {
+        for (const extra of [{}, keys]) {
+          const r = resolveModel(config, real({ CF_AIG_TOKEN: 'tok', ...extra }));
+          const res = streamText({
+            model: r.model,
+            prompt: 'hi',
+            maxRetries: 0,
+            onError: () => {},
+          });
+          await res.consumeStream({ onError: () => {} });
+        }
+      } finally {
+        globalThis.fetch = orig;
+      }
+      expect(seen).toEqual([null, expected]);
+    },
+  );
+
   it.each([
     [
       'anthropic',

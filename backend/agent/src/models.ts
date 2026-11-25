@@ -81,6 +81,15 @@ function buildMock(kind: string): MockLanguageModelV4 {
   return mock;
 }
 
+/** A fetch that drops one request header, then calls the global fetch. */
+function withoutHeader(name: string): typeof fetch {
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.delete(name);
+    return fetch(input, { ...init, headers });
+  };
+}
+
 /**
  * Turns the runtime config into an AI SDK model routed through the AI Gateway. With a gateway token
  * the gateway may hold the provider key (BYOK); otherwise the provider's own secret is required.
@@ -103,16 +112,24 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
   // Without the gateway, undefined keeps each SDK's own default base URL.
   const gateway = (slug: string, version = '') =>
     viaGateway ? `${env.AI_GATEWAY_URL}/${slug}${version}` : undefined;
-  const apiKeyFor = (own: string | undefined, name: string): string => {
-    if (own) return own;
+  // With no key of our own, the gateway's stored (BYOK) key is used. AI Gateway adds it only when the request
+  // has no provider auth header: any value there, a placeholder included, is forwarded to the provider, which
+  // rejects it ("invalid x-api-key"). The SDKs insist on an apiKey, so give them a placeholder and strip the
+  // header they build from it before the request leaves.
+  const keyFor = (
+    own: string | undefined,
+    name: string,
+    authHeader: string,
+  ): { apiKey: string; fetch?: typeof fetch } => {
+    if (own) return { apiKey: own };
     if (!viaGateway || !env.CF_AIG_TOKEN) throw new MissingKeyError(name);
-    return 'gateway-byok'; // placeholder: the gateway injects the stored key
+    return { apiKey: 'gateway-byok', fetch: withoutHeader(authHeader) };
   };
 
   switch (config.provider) {
     case 'anthropic': {
-      const apiKey = apiKeyFor(env.ANTHROPIC_API_KEY, 'Anthropic');
-      const p = createAnthropic({ baseURL: gateway('anthropic', '/v1'), apiKey, headers });
+      const key = keyFor(env.ANTHROPIC_API_KEY, 'Anthropic', 'x-api-key');
+      const p = createAnthropic({ baseURL: gateway('anthropic', '/v1'), headers, ...key });
       return {
         model: p(config.model),
         providerOptions: config.effort ? { anthropic: { effort: config.effort } } : {},
@@ -120,8 +137,8 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
       };
     }
     case 'openai': {
-      const apiKey = apiKeyFor(env.OPENAI_API_KEY, 'OpenAI');
-      const p = createOpenAI({ baseURL: gateway('openai'), apiKey, headers });
+      const key = keyFor(env.OPENAI_API_KEY, 'OpenAI', 'authorization');
+      const p = createOpenAI({ baseURL: gateway('openai'), headers, ...key });
       return {
         model: p(config.model),
         providerOptions: config.effort ? { openai: { reasoningEffort: config.effort } } : {},
@@ -129,11 +146,11 @@ export function resolveModel(config: AssistantConfig, env: Env): ResolvedModel {
       };
     }
     case 'google': {
-      const apiKey = apiKeyFor(env.GOOGLE_API_KEY, 'Google');
+      const key = keyFor(env.GOOGLE_API_KEY, 'Google', 'x-goog-api-key');
       const p = createGoogleGenerativeAI({
         baseURL: gateway('google-ai-studio', '/v1beta'),
-        apiKey,
         headers,
+        ...key,
       });
       return { model: p(config.model), providerOptions: {}, cacheSystem: false };
     }
