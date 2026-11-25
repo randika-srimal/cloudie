@@ -11,7 +11,7 @@ preview_urls = false
 # Secrets (CF_AIG_TOKEN, provider keys): ./cli.sh set-agent-secret, never in this file.
 [vars]
 # Written by `./cli.sh infra-write-config` (part of `./cli.sh deploy`) from the Terraform output ai_gateway_url.
-AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/ACCOUNT_ID/engaging-assistant-assistant" # tf-sync
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/1cd83d7591a9ed13d9d587a4d3241574/engaging-assistant-assistant" # tf-sync
 
 [[durable_objects.bindings]]
 name = "SalesAgent"
@@ -25,7 +25,7 @@ new_sqlite_classes = ["SalesAgent"]
 # value is the placeholder before the first infra-apply). Commit the real id: it is not a secret.
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "00000000000000000000000000000000" # tf-sync
+id = "e8d0376f41a54bbdad1ac45ee00a6c8c" # tf-sync
 
 # Terraform creates this bucket (cloudflare_r2_bucket.kb); the name is fixed in backend/infra/main.tf.
 [[r2_buckets]]
@@ -47,6 +47,14 @@ name = "CONNECT_LIMIT"
 namespace_id = "1002"
   [ratelimits.simple]
   limit = 10
+  period = 60
+
+# Password attempts on the chat page (POST /api/access), checked by the Pages project over RPC (allowUnlock).
+[[ratelimits]]
+name = "UNLOCK_LIMIT"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 5
   period = 60
 
 [observability]

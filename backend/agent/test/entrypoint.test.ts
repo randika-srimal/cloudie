@@ -19,6 +19,16 @@ describe('allowConnect', () => {
   });
 });
 
+describe('allowUnlock', () => {
+  it('allows 5 password attempts a minute from one IP, then refuses', async () => {
+    const results: boolean[] = [];
+    for (let i = 0; i < 6; i++) results.push(await worker.allowUnlock('10.9.0.1'));
+    expect(results.slice(0, 5)).toEqual(Array(5).fill(true));
+    expect(results[5]).toBe(false);
+    expect(await worker.allowUnlock('10.9.0.2')).toBe(true);
+  });
+});
+
 describe('GET /status', () => {
   beforeEach(() => resetConfigCache());
 

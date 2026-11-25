@@ -19,7 +19,7 @@ ALLOWED_ORIGINS = "http://localhost:5173"
 # [env.preview] section) use the top-level values, so the chat does not run on preview addresses.
 [env.production.vars]
 APP_VERSION = "0.1.0"
-ALLOWED_ORIGINS = "https://unsynced.invalid" # tf-sync
+ALLOWED_ORIGINS = "https://engaging-assistant.pages.dev" # tf-sync
 
 [[env.production.services]]
 binding = "AGENT"

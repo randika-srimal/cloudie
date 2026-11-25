@@ -1,10 +1,12 @@
-// Checks the /agents proxy runs before a chat connection reaches the agent Worker. Pure functions, no env.
+// Checks the /agents proxy and /api/access run before a chat reaches the agent Worker. Pure functions, no env.
 
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 /** Turnstile tokens are at most 2048 characters. */
 const MAX_TOKEN = 2048;
 /** How long a chat_pass cookie lasts: 12 hours. */
 export const PASS_SECONDS = 43200;
+/** How long a chat_access cookie (the page password was entered) lasts: 7 days. */
+export const ACCESS_SECONDS = 604800;
 
 /** `ALLOWED_ORIGINS` (comma-separated, e.g. "https://a.example, https://b.example") as a list. */
 export function parseOrigins(value: string): string[] {
@@ -99,24 +101,28 @@ function fromBase64url(s: string): Uint8Array<ArrayBuffer> | null {
   }
 }
 
-/** A chat_pass value valid for 12 hours from `now` (ms): `<expiry epoch seconds>.<base64url HMAC-SHA256(expiry)>`. */
-export async function signPass(secret: string, now: number): Promise<string> {
-  const expiry = String(Math.floor(now / 1000) + PASS_SECONDS);
+/**
+ * A signed value valid for `seconds` from `now` (ms): `<expiry epoch seconds>.<base64url HMAC-SHA256>`. The MAC
+ * covers the expiry and `scope`, so a value signed for one purpose (or one password) is refused for another.
+ */
+async function signExpiring(secret: string, now: number, seconds: number, scope: string) {
+  const expiry = String(Math.floor(now / 1000) + seconds);
   const sig = await crypto.subtle.sign(
     'HMAC',
     await hmacKey(secret, 'sign'),
-    new TextEncoder().encode(expiry),
+    new TextEncoder().encode(scope + expiry),
   );
   return `${expiry}.${toBase64url(sig)}`;
 }
 
-/** True when `cookie` is a chat_pass value signed with `secret` that has not expired at `now` (ms). */
-export async function verifyPass(
-  cookie: string | null | undefined,
+/** True when `value` came from signExpiring with the same `secret` and `scope` and has not expired at `now`. */
+async function verifyExpiring(
+  value: string | null | undefined,
   secret: string,
   now: number,
+  scope: string,
 ): Promise<boolean> {
-  const m = /^(\d{1,12})\.([\w-]+)$/.exec(cookie ?? '');
+  const m = /^(\d{1,12})\.([\w-]+)$/.exec(value ?? '');
   if (!m || !secret) return false;
   const [, expiry, sig] = m as unknown as [string, string, string];
   if (Number(expiry) <= Math.floor(now / 1000)) return false;
@@ -127,8 +133,58 @@ export async function verifyPass(
     'HMAC',
     await hmacKey(secret, 'verify'),
     bytes,
-    new TextEncoder().encode(expiry),
+    new TextEncoder().encode(scope + expiry),
   );
+}
+
+/** A chat_pass value valid for 12 hours from `now` (ms): `<expiry epoch seconds>.<base64url HMAC-SHA256(expiry)>`. */
+export function signPass(secret: string, now: number): Promise<string> {
+  return signExpiring(secret, now, PASS_SECONDS, '');
+}
+
+/** True when `cookie` is a chat_pass value signed with `secret` that has not expired at `now` (ms). */
+export function verifyPass(
+  cookie: string | null | undefined,
+  secret: string,
+  now: number,
+): Promise<boolean> {
+  return verifyExpiring(cookie, secret, now, '');
+}
+
+/**
+ * The MAC scope of a chat_access cookie. It includes the chat password, so changing CHAT_PASSWORD signs
+ * everyone out. The cookie itself carries only the expiry and the MAC, never the password.
+ */
+const accessScope = (password: string) => `access:${password}:`;
+
+/** A chat_access value (the page password was entered) valid for 7 days from `now` (ms). */
+export function signAccess(secret: string, password: string, now: number): Promise<string> {
+  return signExpiring(secret, now, ACCESS_SECONDS, accessScope(password));
+}
+
+/** True when `cookie` is a chat_access value for the current `password` that has not expired at `now` (ms). */
+export function verifyAccess(
+  cookie: string | null | undefined,
+  secret: string,
+  password: string,
+  now: number,
+): Promise<boolean> {
+  if (!password) return Promise.resolve(false);
+  return verifyExpiring(cookie, secret, now, accessScope(password));
+}
+
+/** Compares a typed password with the real one in constant time (both are hashed first, so lengths match). */
+export async function passwordMatches(given: string, expected: string): Promise<boolean> {
+  if (!expected) return false;
+  const digest = async (s: string) =>
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  const [a, b] = await Promise.all([digest(given), digest(expected)]);
+  return crypto.subtle.timingSafeEqual(a, b);
+}
+
+/** The chat_access Set-Cookie header: first-party, sent to the page's /api and /agents requests. */
+export function accessCookie(value: string): string {
+  return `chat_access=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${ACCESS_SECONDS}`;
 }
 
 /** The value of cookie `name` in the request's Cookie header, or null. */

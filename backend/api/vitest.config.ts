@@ -19,6 +19,9 @@ export default class extends WorkerEntrypoint {
   async allowConnect(ip) {
     return (await this.env.CONNECT_LIMIT.limit({ key: ip })).success;
   }
+  async allowUnlock(ip) {
+    return (await this.env.UNLOCK_LIMIT.limit({ key: ip })).success;
+  }
 }`;
 
 // Pages Functions tests run inside workerd, the same runtime as production.
@@ -33,6 +36,7 @@ export default defineConfig({
           ALLOWED_ORIGINS: 'https://chat.test, http://localhost:5173',
           TURNSTILE_SECRET: 'turnstile-test-secret',
           PASS_SECRET: 'pass-test-secret',
+          CHAT_PASSWORD: 'chat-test-password',
         },
         serviceBindings: { AGENT: 'fake-agent' },
         workers: [
@@ -43,6 +47,7 @@ export default defineConfig({
             compatibilityDate: '2026-11-01',
             ratelimits: {
               CONNECT_LIMIT: { namespace_id: '1002', simple: { limit: 10, period: 60 } },
+              UNLOCK_LIMIT: { namespace_id: '1003', simple: { limit: 5, period: 60 } },
             },
           },
         ],

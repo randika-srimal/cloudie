@@ -23,6 +23,16 @@ export const Health = z.object({
 });
 export type Health = z.infer<typeof Health>;
 
+/** GET /api/access, and the 200 reply of POST /api/access: whether this browser has entered the chat password. */
+export const AccessStatus = z.object({ unlocked: z.boolean() });
+export type AccessStatus = z.infer<typeof AccessStatus>;
+
+/** POST /api/access body: the password typed on the chat page. */
+export const AccessRequest = z.object({
+  password: z.string().check(z.minLength(1), z.maxLength(256)),
+});
+export type AccessRequest = z.infer<typeof AccessRequest>;
+
 /** Every error response: `{ "error": "..." }` with a 4xx or 5xx status. */
 export const ApiError = z.object({ error: z.string() });
 export type ApiError = z.infer<typeof ApiError>;

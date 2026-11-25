@@ -1,7 +1,8 @@
 # The sales assistant
 
-A chat page (`/chat`) that HubSpot embeds for Engaging's sales reps. It answers questions about Engaging's
-services and case studies from a knowledge base in `knowledge/`, through a model behind Cloudflare AI Gateway.
+A password-protected chat page (`/chat`) for Engaging's sales reps, replacing the HubSpot page
+`info.engaging.io/eio-sales-assistant`. It answers questions about Engaging's services and case studies from a
+knowledge base in `knowledge/`, through a model behind Cloudflare AI Gateway.
 How the pieces connect is in [Architecture and resources](../architecture/overview.md); this page is how to run
 it day to day.
 
@@ -70,43 +71,71 @@ set `kbVersion` to the earlier version (printed by that publish, or in its CI lo
 Git too, or the next merge publishes it again. A code rollback is separate: see
 [Deploy → Rolling back](../operations/deploy.md#rolling-back).
 
-## Embed in HubSpot
+## The page and its password
 
-Add an HTML or embed module to the gated HubSpot page with:
+`/chat` is a copy of the HubSpot page it replaces, `info.engaging.io/eio-sales-assistant`: the same dark layout,
+fonts (Atkinson Hyperlegible Next, JetBrains Mono), suggestion buttons, "Searching my knowledge" indicator and
+awards footer. Like that page it asks for one shared password first.
 
-```html
-<iframe
-  src="https://<domain>/chat"
-  style="width:100%;height:700px;border:0"
-  allow="clipboard-write"
-></iframe>
+| View         | When                                      | Shows                                                                 |
+| ------------ | ----------------------------------------- | --------------------------------------------------------------------- |
+| Password     | No valid `chat_access` cookie             | The password box and "Access the assistant"                           |
+| Start screen | Unlocked, no messages yet                 | Intro, four suggestion buttons, the question box, the awards footer   |
+| Conversation | After the first question (or on a reload) | Messages, the question box pinned to the bottom, "Start a new search" |
+
+The password is checked on the server, not in the page:
+
+1. The page calls `GET /api/access`, which answers `{ "unlocked": true | false }` from the `chat_access` cookie.
+2. The form sends `POST /api/access` with `{ "password": "..." }`. The Function compares it with the Pages secret
+   `CHAT_PASSWORD` in constant time and, if it matches, sets `chat_access` for 7 days (`HttpOnly`, `Secure`,
+   `SameSite=Lax`). Five attempts a minute per IP are allowed (`UNLOCK_LIMIT` on the agent Worker), then 429.
+3. The `/agents` proxy refuses every chat request without a valid `chat_access` (401 "Password required") before
+   the connect limit and Turnstile, so the password guards the assistant itself, not only the page.
+
+| Task                       | How                                                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Set or change the password | `./cli.sh set-secret CHAT_PASSWORD`, then `./cli.sh deploy-pages` (signs everyone out) |
+| Sign everyone out          | Change the password, or rotate `PASS_SECRET` (also ends every `chat_pass`)             |
+| Local password             | `CHAT_PASSWORD` in `backend/api/.dev.vars` (default `engaging-dev-password`)           |
+
+The cookie holds only an expiry and an HMAC (a keyed hash) over it and the current password, never the password.
+Anyone who knows the password can use the assistant and get the knowledge base's content out of it by asking, so
+treat the password like the content: share it with the sales team only, and change it when someone leaves.
+`GET /api/health` stays public and reports the live `model` and `kbVersion`.
+
+The page can no longer be framed (`frame-ancestors 'none'` in `web/static/_headers`): browsers would not send
+the `SameSite=Lax` cookie inside another site's iframe, so it is a page of its own.
+
+## Move the old HubSpot URL here
+
+`info.engaging.io` is a HubSpot website domain: its DNS record (in the `engaging.io` Cloudflare zone) is a
+DNS-only CNAME to `435515.group15.sites.hubspot.net`, so HubSpot serves every page on it. One path of a hostname
+cannot be pointed somewhere else in DNS, so the move is in two parts: give the Cloudflare chat its own hostname,
+then have HubSpot redirect the old URL to it. HubSpot keeps serving the rest of `info.engaging.io`.
+
+```mermaid
+flowchart LR
+  U[Sales rep's bookmark<br/>info.engaging.io/eio-sales-assistant] -->|HubSpot URL redirect, 301| N[assistant.engaging.io/chat]
+  N -->|proxied CNAME| P[Pages project engaging-assistant]
 ```
 
-`<domain>` is the Pages address (`engaging-assistant.pages.dev`) or a custom domain. Two settings must name the HubSpot page:
+1. **Custom domain.** In a gitignored `backend/infra/terraform.tfvars`, set `zone_name = "engaging.io"` and
+   `custom_domains = ["assistant.engaging.io"]` (any free name works). The `engaging.io` zone must be in the same
+   Cloudflare account as the Pages project; if it is in another one, add the domain in the dashboard instead
+   (**Workers & Pages → engaging-assistant → Custom domains**). Then `./cli.sh deploy`: its Terraform step creates the
+   `cloudflare_pages_domain` and the proxied CNAME, and `infra-write-config` adds the new origin to production
+   `ALLOWED_ORIGINS` (commit `backend/api/wrangler.toml`). Turnstile picks the domain up from the same variable.
+2. **Check it.** Open `https://assistant.engaging.io/chat` once the certificate is issued (a few minutes), enter the
+   password and ask a question.
+3. **Redirect in HubSpot.** In HubSpot, **Settings → Content → Domains & URLs → URL Redirects → Add URL redirect**:
+   original URL `info.engaging.io/eio-sales-assistant`, destination `https://assistant.engaging.io/chat`,
+   permanent (301). A redirect does not apply while a live page has the same URL, so first unpublish (or archive)
+   the old page in **Content → Website Pages**, or tick the redirect's option to apply even when a page exists.
+4. **Test the old URL** in a private window: it should land on the new password view.
+5. **Retire the old assistant** once nobody uses it: the HubSpot module connects to its own server
+   (`eio-ai-assist.ec7.co`), which can then be shut down.
 
-| Setting                                | Why                                                                                                                   | Where                        |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `frame-ancestors` in the `/chat` CSP   | The browser refuses to show the page in a frame from anywhere else (it does not stop anyone opening `/chat` directly) | `web/static/_headers`        |
-| `hubspot_domains` (Terraform variable) | The Turnstile widget runs only on hostnames it lists                                                                  | `backend/infra/variables.tf` |
-
-`ALLOWED_ORIGINS` stays the chat page's own address, never HubSpot's: inside the iframe the WebSocket's `Origin`
-is the chat page's.
-
-**TODO(user):** `frame-ancestors` currently allows `https://www.engaging.io`, `https://*.engaging.io`,
-`https://*.hubspot.com` and `https://*.hs-sites.com`. Confirm the HubSpot page's real origin and narrow the list
-to it.
-
-### Who can reach it
-
-The HubSpot page is gated; the chat is not. Anyone who has the `/chat` URL can open it directly, pass Turnstile
-(it stops bots, not people) and chat, and can get the knowledge base's content out of the assistant by asking.
-A passed check leaves a `chat_pass` cookie that works as a 12-hour bearer pass. The rate limits (10 connects and
-20 messages per minute per IP) cap cost, not access, and `GET /api/health` publicly shows the live `model` and
-`kbVersion`.
-
-**Decision for the owner:** keep it as it is (anything in `knowledge/` must then be fine for any visitor to read),
-or restrict it, with Cloudflare Access on `/chat` and `/agents/*` or a token the HubSpot page signs and the proxy
-checks. Details in [Architecture → Who can use the chat](../architecture/overview.md#who-can-use-the-chat).
+Rolling back is deleting (or pausing) the HubSpot redirect and republishing the old page.
 
 ## Costs
 

@@ -52,7 +52,7 @@ Lines tagged `# tf-sync` in the two `wrangler.toml` files are rewritten from the
 `./cli.sh infra-write-config`, which `./cli.sh deploy` runs after its Terraform step. Commit the result; none of it
 is secret.
 
-`./cli.sh first-setup` sets all three once. Secrets never go through Terraform files or the state-reading
+`./cli.sh first-setup` sets all four once. Secrets never go through Terraform files or the state-reading
 commands' output on screen; to set or rotate one by hand:
 
 ```bash
@@ -63,6 +63,9 @@ docker compose exec -T app pnpm tf output -raw turnstile_secret   # copy it, the
 # Chat cookie signing key (Pages project), any long random string:
 openssl rand -base64 32   # copy it, then:
 ./cli.sh set-secret PASS_SECRET
+
+# The chat page's shared password (Pages project). Changing it signs everyone out of the chat:
+./cli.sh set-secret CHAT_PASSWORD
 
 # AI Gateway token: create it in the dashboard (AI → AI Gateway → engaging-assistant-assistant → Settings → Authentication),
 # then set it on the agent Worker, not on Pages:

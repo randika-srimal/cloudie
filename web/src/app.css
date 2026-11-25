@@ -1,26 +1,33 @@
 @import 'tailwindcss';
-/* Epilogue, Engaging's only typeface, self-hosted (no request to Google Fonts, nothing for the CSP to allow). */
-@import '@fontsource-variable/epilogue';
+/* The typefaces of the HubSpot sales-assistant page this site replaces, self-hosted (no request to Google Fonts,
+   nothing for the CSP to allow): Atkinson Hyperlegible Next for text, JetBrains Mono for buttons and labels. */
+@import '@fontsource-variable/atkinson-hyperlegible-next';
+@import '@fontsource-variable/jetbrains-mono';
 
 /*
-  Design tokens: the Engaging.io brand palette. Components use them through Tailwind (bg-brand, text-ink…).
-  Light only: the painterly logo is made for light backgrounds, so there is no dark theme.
+  Design tokens, matching info.engaging.io/eio-sales-assistant. Components use them through Tailwind
+  (bg-surface, text-ink, bg-brand…). Dark only, like that page; the logo is the pink version made for it.
 */
 @theme {
-  --color-brand: #ff009a; /* hot pink, the one accent */
-  --color-brand-pale: #ffe7f3;
-  --color-brand-strong: #d6007f; /* hover/pressed pink */
-  --color-surface: #ffffff;
-  --color-panel: #f3f3f3; /* light grey surface */
-  --color-line: #efefef;
-  --color-ink: #212029; /* warm near-black, never #000 */
-  --color-muted: #6e7173; /* mid grey #888B8D darkened to pass WCAG AA on white for small text */
+  --color-brand: #fe009c; /* hot pink, the one accent: buttons, links, focus */
+  --color-brand-strong: #db2781; /* hover/pressed pink */
+  --color-brand-soft: #f9a8d4; /* links inside replies */
+  --color-surface: #171814; /* page background, warm near-black */
+  --color-panel: #18181b; /* input boxes */
+  --color-line: #3f3f46; /* borders and separators */
+  --color-ink: #e7e5da; /* body text, warm off-white */
+  --color-paper: #e7e5da; /* the light blocks: suggestion buttons, the visitor's own messages */
+  --color-paper-ink: #171814; /* text on paper */
+  --color-muted: #888b80; /* secondary text, 5.3:1 on the surface */
+  --color-placeholder: #a1a1aa;
   --font-sans:
-    'Epilogue Variable', 'Epilogue', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, -apple-system,
+    'Segoe UI', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Menlo, monospace;
 }
 
 html {
   background: var(--color-surface);
   color: var(--color-ink);
-  color-scheme: light;
+  color-scheme: dark;
 }

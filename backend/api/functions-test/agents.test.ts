@@ -1,10 +1,11 @@
 // The guarded proxy in functions/agents/[[path]].ts, called directly inside workerd. AGENT is the fake agent
 // Worker from vitest.config.ts (it echoes what it received, and has a real 10/min CONNECT_LIMIT).
 import { createExecutionContext, env } from 'cloudflare:test';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { onRequest as middleware } from '../functions/_middleware.ts';
 import {
   originHostnames,
+  signAccess,
   signPass,
   verifyPass,
   verifyTurnstile,
@@ -18,14 +19,29 @@ let ipCounter = 0;
 
 type Echo = { url: string; method: string; ip: string | null; cookie: string | null };
 
+/** A valid chat_access cookie (the page password was entered); every request carries it unless `access: false`. */
+let ACCESS = '';
+beforeAll(async () => {
+  ACCESS = `chat_access=${await signAccess(env.PASS_SECRET, env.CHAT_PASSWORD, Date.now())}`;
+});
+
 function context(
   path: string,
-  init: { headers?: Record<string, string>; method?: string; ip?: string; env?: Partial<Env> } = {},
+  init: {
+    headers?: Record<string, string>;
+    method?: string;
+    ip?: string;
+    env?: Partial<Env>;
+    access?: boolean;
+  } = {},
 ) {
+  const { Cookie: cookie, ...rest } = init.headers ?? {};
+  const cookies = [init.access === false ? '' : ACCESS, cookie ?? ''].filter(Boolean).join('; ');
   const headers: Record<string, string> = {
     Origin: ORIGIN,
     'cf-connecting-ip': init.ip ?? `10.7.0.${++ipCounter}`,
-    ...init.headers,
+    ...rest,
+    ...(cookies ? { Cookie: cookies } : {}),
   };
   const request = new Request(`https://engaging-assistant.test${path}`, {
     method: init.method ?? 'GET',
@@ -83,6 +99,41 @@ describe('/agents proxy guards', () => {
     });
     same.request.headers.delete('Origin');
     expect((await proxy(same)).status).toBe(200);
+  });
+
+  it('asks for the password (401) without a chat_access cookie, even with a pass and token', async () => {
+    const verify = fakeSiteverify(true);
+    const res = await proxy(
+      context('/agents/sales-agent/s1?cf_turnstile=good', {
+        access: false,
+        headers: { Cookie: await passCookie() },
+      }),
+    );
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'Password required' });
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('refuses a chat_access cookie signed for an older password', async () => {
+    const old = await signAccess(env.PASS_SECRET, 'old-password', Date.now());
+    const res = await proxy(
+      context('/agents/sales-agent/s1', {
+        access: false,
+        headers: { Cookie: `chat_access=${old}; ${await passCookie()}` },
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses a chat_pass value presented as chat_access', async () => {
+    const pass = await signPass(env.PASS_SECRET, Date.now());
+    const res = await proxy(
+      context('/agents/sales-agent/s1', {
+        access: false,
+        headers: { Cookie: `chat_access=${pass}; chat_pass=${pass}` },
+      }),
+    );
+    expect(res.status).toBe(401);
   });
 
   it('asks for verification (401) with neither token nor cookie', async () => {

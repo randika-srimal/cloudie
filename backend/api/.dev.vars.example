@@ -8,3 +8,7 @@ TURNSTILE_SECRET=1x0000000000000000000000000000000AA
 # HMAC key that signs the 12-hour chat_pass cookie. Any long random string; production uses its own
 # (e.g. openssl rand -base64 32). Changing it signs everyone out of the chat.
 PASS_SECRET=dev-only-pass-secret-change-me
+
+# The shared password the chat page asks for (like the old HubSpot password page). The e2e tests type this
+# value. Production: ./cli.sh set-secret CHAT_PASSWORD. Changing it signs everyone out of the chat.
+CHAT_PASSWORD=engaging-dev-password

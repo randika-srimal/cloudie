@@ -8,17 +8,17 @@
 
 The wizard runs these steps, each one skippable:
 
-| Step                      | Action               | Creates                                                                                                   |
-| ------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
-| 1. API tokens             | `tokens`             | Three tokens, saved to `.env.cloudflare` ([Credentials](#credentials))                                    |
-| 2. Terraform state bucket | `infra-bootstrap`    | Private R2 bucket `engaging-assistant-tfstate`                                                            |
-| 3. Infrastructure         | `infra-apply`        | Pages project `engaging-assistant` (and custom domains, if set), KV, R2, AI Gateway, Turnstile            |
-| 4. IDs into code          | `infra-write-config` | The KV id, AI Gateway URL and production `ALLOWED_ORIGINS` in the two `wrangler.toml` files (commit them) |
-| 5. Agent Worker           | `deploy-agent`       | The Worker `engaging-assistant-agent` (Pages' `AGENT` binding and the agent secret need it to exist)      |
-| 6. Secrets                | (wizard only)        | `TURNSTILE_SECRET` (read from Terraform), `PASS_SECRET` (generated), `CF_AIG_TOKEN` (you paste it)        |
-| 7. Build and deploy       | `deploy-pages`       | The first production deployment at `https://engaging-assistant.pages.dev`                                 |
-| 8. Knowledge base         | `kb-publish`         | The first `kbVersion`; until then the chat answers only with its fallback message                         |
-| 9. Health check           | `health`             | Nothing; checks `GET /api/health` answers                                                                 |
+| Step                      | Action               | Creates                                                                                                                 |
+| ------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1. API tokens             | `tokens`             | Three tokens, saved to `.env.cloudflare` ([Credentials](#credentials))                                                  |
+| 2. Terraform state bucket | `infra-bootstrap`    | Private R2 bucket `engaging-assistant-tfstate`                                                                          |
+| 3. Infrastructure         | `infra-apply`        | Pages project `engaging-assistant` (and custom domains, if set), KV, R2, AI Gateway, Turnstile                          |
+| 4. IDs into code          | `infra-write-config` | The KV id, AI Gateway URL and production `ALLOWED_ORIGINS` in the two `wrangler.toml` files (commit them)               |
+| 5. Agent Worker           | `deploy-agent`       | The Worker `engaging-assistant-agent` (Pages' `AGENT` binding and the agent secret need it to exist)                    |
+| 6. Secrets                | (wizard only)        | `TURNSTILE_SECRET` (read from Terraform), `PASS_SECRET` (generated), `CHAT_PASSWORD` and `CF_AIG_TOKEN` (you type them) |
+| 7. Build and deploy       | `deploy-pages`       | The first production deployment at `https://engaging-assistant.pages.dev`                                               |
+| 8. Knowledge base         | `kb-publish`         | The first `kbVersion`; until then the chat answers only with its fallback message                                       |
+| 9. Health check           | `health`             | Nothing; checks `GET /api/health` answers                                                                               |
 
 The assistant needs every step: Terraform creates its KV, R2, AI Gateway and Turnstile widget, so there is no
 path without it.
@@ -32,13 +32,14 @@ The wizard sets these once. To set or rotate one by hand (full commands in
 | ------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------- |
 | `TURNSTILE_SECRET`                               | Pages secret                                          | `./cli.sh set-secret TURNSTILE_SECRET`                        |
 | `PASS_SECRET`                                    | Pages secret                                          | `./cli.sh set-secret PASS_SECRET` (`openssl rand -base64 32`) |
+| `CHAT_PASSWORD` (the chat page's password)       | Pages secret                                          | `./cli.sh set-secret CHAT_PASSWORD`                           |
 | `CF_AIG_TOKEN` (AI Gateway token), provider keys | Secret on the agent Worker `engaging-assistant-agent` | `./cli.sh set-agent-secret CF_AIG_TOKEN`                      |
 | `PUBLIC_TURNSTILE_SITEKEY`                       | GitHub repository **variable** (CI only)              | The value of `pnpm tf output -raw turnstile_sitekey`          |
 
 `./cli.sh deploy` reads the sitekey from Terraform itself. Production `ALLOWED_ORIGINS` (the chat page's own
 addresses, never HubSpot's) is written into `backend/api/wrangler.toml` from the `chat_origins` output; commit it.
 Secrets set on the agent Worker need the Worker to exist (`./cli.sh deploy-agent`), and a Pages secret takes
-effect on the next Pages deploy. Day-to-day operation (model, keys, HubSpot embed, costs) is in
+effect on the next Pages deploy. Day-to-day operation (model, keys, the chat password, the old HubSpot URL, costs) is in
 [The sales assistant](../guide/assistant.md).
 
 ## Every deploy

@@ -8,6 +8,8 @@ export interface Env {
   RATE_LIMIT: RateLimit;
   /** 10 chat connections per minute per client IP; checked by the Pages proxy over RPC (allowConnect). */
   CONNECT_LIMIT: RateLimit;
+  /** 5 chat-password attempts per minute per client IP; checked by the Pages project over RPC (allowUnlock). */
+  UNLOCK_LIMIT: RateLimit;
   /** Base URL of the AI Gateway: https://gateway.ai.cloudflare.com/v1/<account>/<gateway>. */
   AI_GATEWAY_URL: string;
   CF_AIG_TOKEN?: string;

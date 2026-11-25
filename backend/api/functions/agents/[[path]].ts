@@ -1,7 +1,7 @@
 // /agents/*: the guarded proxy from the chat page to the agent Worker (engaging-assistant-agent, the AGENT service
 // binding). The chat page's URL is public, so every request (WebSocket upgrade, or the Agents SDK's HTTP
-// GET/POST) must pass, in order: path, Origin, connect limit (WebSocket upgrades only), then a chat_pass
-// cookie or a Turnstile token.
+// GET/POST) must pass, in order: path, Origin, the chat_access cookie (the page password was entered, see
+// api/access.ts), connect limit (WebSocket upgrades only), then a chat_pass cookie or a Turnstile token.
 import type { Env } from '../_lib/env.ts';
 import {
   checkOrigin,
@@ -10,6 +10,7 @@ import {
   parseOrigins,
   readCookie,
   signPass,
+  verifyAccess,
   verifyPass,
   verifyTurnstile,
 } from '../_lib/guards.ts';
@@ -31,6 +32,10 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   if (!url.pathname.startsWith(PREFIX)) return error(404, 'Not found');
   const origins = parseOrigins(env.ALLOWED_ORIGINS);
   if (!checkOrigin(request, origins)) return error(403, 'Forbidden');
+  const now = Date.now();
+  const access = readCookie(request, 'chat_access');
+  if (!(await verifyAccess(access, env.PASS_SECRET, env.CHAT_PASSWORD, now)))
+    return error(401, 'Password required');
 
   // Cloudflare sets cf-connecting-ip itself in production, so clients cannot choose their key. Only WebSocket
   // upgrades count against the connect limit: the SDK's plain GETs (get-messages on every page load) would
@@ -39,7 +44,6 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   const upgrade = request.headers.get('Upgrade')?.toLowerCase() === 'websocket';
   if (upgrade && !(await env.AGENT.allowConnect(ip))) return error(429, 'Too many connections');
 
-  const now = Date.now();
   const token = url.searchParams.get('cf_turnstile');
   url.searchParams.delete('cf_turnstile'); // tokens stay out of the agent's URLs and logs
   let setCookie: string | undefined;

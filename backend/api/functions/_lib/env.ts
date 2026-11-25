@@ -5,6 +5,8 @@
 export interface AgentService extends Fetcher {
   /** CONNECT_LIMIT on the agent Worker: false after 10 connects in a minute from `ip`. */
   allowConnect(ip: string): Promise<boolean>;
+  /** UNLOCK_LIMIT on the agent Worker: false after 5 password attempts in a minute from `ip`. */
+  allowUnlock(ip: string): Promise<boolean>;
 }
 
 export interface Env {
@@ -16,4 +18,6 @@ export interface Env {
   TURNSTILE_SECRET: string;
   /** Secret: HMAC key that signs chat_pass cookies. */
   PASS_SECRET: string;
+  /** Secret: the shared password the chat page asks for (POST /api/access). Unset: nobody can unlock. */
+  CHAT_PASSWORD: string;
 }

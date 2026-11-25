@@ -295,7 +295,10 @@ importers:
       '@engaging-assistant/protocol':
         specifier: workspace:*
         version: link:../shared/protocol
-      '@fontsource-variable/epilogue':
+      '@fontsource-variable/atkinson-hyperlegible-next':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
         specifier: ^5.3.0
         version: 5.3.0
       agents:
@@ -794,8 +797,11 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fontsource-variable/epilogue@5.3.0':
-    resolution: {integrity: sha512-atoQ7bIqgDLX+zlxbxmYpNZ7nqkwwZczkhJhWdaX+UBZufhPWP3vrcKaLVaNcCbRyHeSoX/y/HJNGjKhewEsAg==}
+  '@fontsource-variable/atkinson-hyperlegible-next@5.3.0':
+    resolution: {integrity: sha512-UnLzNUy1RWoLDfydAatP4NaRm99X/WbQEph7q/PymJnCFIOOwKOx3pBmp5ys8trO0dM+CKGuJgeZP9fAR4mQpA==}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2995,7 +3001,9 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@fontsource-variable/epilogue@5.3.0': {}
+  '@fontsource-variable/atkinson-hyperlegible-next@5.3.0': {}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
