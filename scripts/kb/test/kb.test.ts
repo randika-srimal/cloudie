@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildKb } from '../build.ts';
-import { checkKb } from '../check.ts';
+import { checkKb, githubReport } from '../check.ts';
 import { DRAFT_SUMMARY_FALLBACK, foldAccents, parseCaseStudy } from '../lib.ts';
 
 const FIXTURES = join(import.meta.dirname, 'fixtures', 'kb');
@@ -346,5 +346,48 @@ describe('buildKb', () => {
 describe('foldAccents', () => {
   it('drops accents and invisible characters', () => {
     expect(foldAccents('Bai\u00ADll\u200Bi\u00E9\uFEFF\u2060')).toBe('Baillie');
+  });
+});
+
+describe('githubReport', () => {
+  const failing = {
+    errors: [
+      'case-studies/acme.md: contains "Initech" (never-disclose.txt), which must never be uploaded',
+      'the bundle is about 190000 tokens, over the 180000 limit',
+    ],
+    warnings: ['instructions.md: 50% longer, line one\nline two'],
+    tokens: 190000,
+  };
+
+  it('pins each error and warning to its file, escaping what workflow commands need', () => {
+    const { annotations } = githubReport(failing, 'knowledge');
+    expect(annotations).toEqual([
+      '::error file=knowledge/case-studies/acme.md,title=Knowledge base check::contains "Initech" (never-disclose.txt), which must never be uploaded',
+      '::error title=Knowledge base check::the bundle is about 190000 tokens, over the 180000 limit',
+      '::warning file=knowledge/instructions.md,title=Knowledge base check::50%25 longer, line one%0Aline two',
+    ]);
+  });
+
+  it('summarises problems in a table with the fix and the help link', () => {
+    const { summary } = githubReport(
+      failing,
+      'knowledge',
+      'https://github.com/o/r/blob/main/knowledge/EDITING.md',
+    );
+    expect(summary).toContain('**2 problems to fix before this can be merged.**');
+    expect(summary).toContain('| `case-studies/acme.md` | contains "Initech"');
+    expect(summary).toContain('| whole knowledge base | the bundle is about 190000 tokens');
+    expect(summary).toContain('**Notes** (these do not block the change)');
+    expect(summary).toContain('(https://github.com/o/r/blob/main/knowledge/EDITING.md)');
+  });
+
+  it('says it passed when there are no errors', () => {
+    const { summary, annotations } = githubReport(
+      { errors: [], warnings: [], tokens: 1 },
+      'knowledge',
+    );
+    expect(annotations).toEqual([]);
+    expect(summary).toContain('**Passed.**');
+    expect(summary).not.toContain('Help:');
   });
 });

@@ -4,6 +4,10 @@
 //
 // Errors fail the run; warnings only print. Confidentiality is enforced here, on the rendered upload, not by
 // the prompt: a name that must never appear stops the build wherever it turns up.
+//
+// In GitHub Actions it also reports for people who edit on github.com (knowledge/EDITING.md): each error becomes
+// an annotation on its file in the pull request, and the run gets a plain-language summary.
+import { appendFileSync } from 'node:fs';
 import {
   estimateTokens,
   FAIL_TOKENS,
@@ -79,6 +83,73 @@ export function checkKb(dir: string): CheckResult {
   return { errors, warnings, tokens };
 }
 
+/** Characters GitHub workflow commands need escaped in a message (`%`, CR, LF) and in a property (also `:` `,`). */
+const escapeData = (s: string) =>
+  s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+const escapeProperty = (s: string) => escapeData(s).replaceAll(':', '%3A').replaceAll(',', '%2C');
+
+/** The file an error or warning is about (`case-studies/x.md`, `instructions.md`…) and the rest of it. */
+function splitFile(message: string): { file: string | null; text: string } {
+  const m = /^((?:case-studies\/[^:\s]+\.md)|instructions\.md|never-disclose\.txt): (.*)$/s.exec(
+    message,
+  );
+  return m ? { file: m[1]!, text: m[2]! } : { file: null, text: message };
+}
+
+/**
+ * What a GitHub Actions run shows for a check: `annotations` (workflow commands that pin each error or warning
+ * to its file in the pull request's "Files changed") and `summary` (markdown for the run's summary page),
+ * worded for someone who edited a file on github.com. `dir` is the knowledge folder relative to the repo root;
+ * `helpUrl`, when given, links the editing guide.
+ */
+export function githubReport(
+  result: CheckResult,
+  dir: string,
+  helpUrl?: string,
+): { annotations: string[]; summary: string } {
+  const annotate = (level: 'error' | 'warning', message: string) => {
+    const { file, text } = splitFile(message);
+    const where = file ? `file=${escapeProperty(`${dir}/${file}`)},` : '';
+    return `::${level} ${where}title=Knowledge base check::${escapeData(text)}`;
+  };
+  const annotations = [
+    ...result.errors.map((e) => annotate('error', e)),
+    ...result.warnings.map((w) => annotate('warning', w)),
+  ];
+
+  const cell = (s: string) => s.replaceAll('|', '\\|').replaceAll('\n', ' ');
+  const rows = (messages: string[]) =>
+    messages.map((m) => {
+      const { file, text } = splitFile(m);
+      return `| ${file ? `\`${file}\`` : 'whole knowledge base'} | ${cell(text)} |`;
+    });
+  const lines = ['## Knowledge base check', ''];
+  if (result.errors.length === 0) {
+    lines.push('**Passed.** Nothing blocks this change. A reviewer can merge it.');
+  } else {
+    lines.push(
+      `**${result.errors.length} problem${result.errors.length === 1 ? '' : 's'} to fix before this can be merged.**`,
+      '',
+      'Open the file named below, click the pencil icon, fix it and commit to this same branch. The check runs again by itself.',
+      '',
+      '| File | Problem |',
+      '| --- | --- |',
+      ...rows(result.errors),
+    );
+  }
+  if (result.warnings.length > 0)
+    lines.push(
+      '',
+      '**Notes** (these do not block the change):',
+      '',
+      '| File | Note |',
+      '| --- | --- |',
+      ...rows(result.warnings),
+    );
+  if (helpUrl) lines.push('', `Help: [How to edit the knowledge base](${helpUrl})`);
+  return { annotations, summary: `${lines.join('\n')}\n` };
+}
+
 if (import.meta.main) {
   const dir = process.argv[2] ?? 'knowledge';
   const { errors, warnings, tokens } = checkKb(dir);
@@ -92,5 +163,13 @@ if (import.meta.main) {
   for (const w of warnings) console.warn(`warning: ${w}`);
   for (const e of errors) console.error(`error: ${e}`);
   console.log(`${errors.length} errors, ${warnings.length} warnings`);
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo } = process.env;
+    const help = server && repo ? `${server}/${repo}/blob/main/${dir}/EDITING.md` : undefined;
+    const report = githubReport({ errors, warnings, tokens }, dir, help);
+    for (const a of report.annotations) console.log(a);
+    if (process.env.GITHUB_STEP_SUMMARY)
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, report.summary);
+  }
   process.exitCode = errors.length ? 1 : 0;
 }

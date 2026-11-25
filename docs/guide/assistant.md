@@ -55,7 +55,8 @@ provider's own key, the assistant answers with its fallback message ("Sorry, som
 
 ## Edit and publish the knowledge base
 
-The full guide is [`knowledge/README.md`](../../knowledge/README.md): file format, statuses (`published`,
+Non-developers edit on github.com with [`knowledge/EDITING.md`](../../knowledge/EDITING.md) (pencil icon, pull
+request, the check, a reviewer merges). The full technical guide is [`knowledge/README.md`](../../knowledge/README.md): file format, statuses (`published`,
 `anonymous`, `reference`, `draft`, `excluded`, `never_disclose`), what `pnpm kb:check` enforces, and publishing.
 In short:
 

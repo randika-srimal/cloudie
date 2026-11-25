@@ -3,12 +3,16 @@
 Everything the sales assistant knows about Engaging.io's work. It is published to Cloudflare R2 separately from
 the code: a merge to `main` that changes this folder goes live within a minute or two, with no deploy.
 
-| Path                       | What it is                                                                                     |
-| -------------------------- | ---------------------------------------------------------------------------------------------- |
-| `instructions.md`          | The system prompt: scope, naming and grounding rules, answer format, contact lines             |
-| `case-studies/<slug>.md`   | One case study per file: YAML frontmatter, then the write-up in markdown                       |
-| `case-studies/_unmatched/` | Documents from the old knowledge base with no index record. Never uploaded; kept for reference |
-| `never-disclose.txt`       | Names that must never appear in anything uploaded. One per line, `#` starts a comment          |
+**Editing on github.com, without a developer setup?** Follow [EDITING.md](EDITING.md). This page is the
+technical reference.
+
+| Path                        | What it is                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `instructions.md`           | The system prompt: scope, naming and grounding rules, answer format, contact lines             |
+| `case-studies/<slug>.md`    | One case study per file: YAML frontmatter, then the write-up in markdown                       |
+| `case-studies/_template.md` | A blank case study with notes on every field. Never uploaded (its name starts with `_`)        |
+| `case-studies/_unmatched/`  | Documents from the old knowledge base with no index record. Never uploaded; kept for reference |
+| `never-disclose.txt`        | Names that must never appear in anything uploaded. One per line, `#` starts a comment          |
 
 The build (`pnpm kb:build`) turns these into one bundle: `instructions.md` as it is, and `prompt.md`, which holds
 a generated case study index (`<case_study_index>`) followed by every uploadable case study
@@ -42,7 +46,8 @@ a generated case study index (`<case_study_index>`) followed by every uploadable
 4. Copy the `url` from the live page on www.engaging.io, character for character. The chat page only makes
    links clickable when they are a `url` in the knowledge base.
 5. Run `./cli.sh kb-check` (or `docker compose exec -T app pnpm kb:check`) and fix every error, then open a pull
-   request. CI runs the same check.
+   request. CI runs the same check; on GitHub each error is also shown on its file in the pull request and
+   summarised in plain words on the run's summary page.
 
 ## Statuses
 
